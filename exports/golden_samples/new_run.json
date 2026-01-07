@@ -1,5 +1,5 @@
 {
-  "run_id": "run_20250201_0001",
+  "run_id": "run_20250115_0001",
   "mode": "staging",
   "scene_assets": [],
   "voiceover_url_signed": null,
@@ -7,72 +7,57 @@
   "youtube_video_id": null,
   "manifest": {
     "manifest_version": "2.0",
-    "topic": {
-      "title": "Su dövranı necə işləyir",
-      "category": "education",
+    "project": {
+      "title": "Helal Elmi Faktlar",
       "language": "az",
+      "category": "education",
+      "created_at": "2025-01-15T09:00:00Z"
+    },
+    "content": {
+      "topic": "Su dövranı necə işləyir",
       "keywords": ["su", "dövran", "təbiət"],
       "summary": "Su dövranının əsas mərhələləri haqqında qısa izah",
-      "source_references": []
+      "script": "",
+      "sources": []
     },
-    "script": {
-      "draft": "",
-      "approved": "",
-      "review_notes": [],
-      "last_reviewed_at": null
-    },
-    "assets": {
-      "scene_plan": [],
-      "items": [],
+    "production": {
       "voiceover": {
         "provider": "",
         "voice_id": "",
         "speed": 1.0,
         "pitch": 0.0,
-        "output_format": "mp3",
-        "voiceover_url_signed": null
+        "output_format": "mp3"
+      },
+      "visual_style": {
+        "theme": "minimal",
+        "aspect_ratio": "16:9",
+        "palette": ["#0F172A", "#22D3EE", "#F8FAFC"]
+      },
+      "render": {
+        "resolution": "1920x1080",
+        "fps": 30,
+        "codec": "h264",
+        "bitrate_kbps": 8000
       }
     },
-    "render": {
-      "resolution": "1920x1080",
-      "fps": 30,
-      "codec": "h264",
-      "bitrate_kbps": 8000,
-      "render_id": null,
-      "render_status": "not_started"
-    },
-    "publish": {
+    "publication": {
       "channel_id": "",
       "title": "",
       "description": "",
       "tags": [],
       "privacy": "unlisted",
-      "scheduled_at": null,
-      "youtube_video_id": null,
-      "publish_status": "not_published"
+      "scheduled_at": null
     },
-    "analytics": {
-      "enabled": true,
-      "tracking_tags": [],
-      "first_publish_at": null,
-      "last_metrics_pull_at": null,
-      "metrics": {}
-    },
-    "audit": {
-      "created_by": "wf-01",
-      "updated_by": "wf-01",
-      "change_log": [
-        {
-          "at": "2025-02-01T09:00:00Z",
-          "by": "wf-01",
-          "change": "run created"
-        }
-      ]
-    },
-    "timestamps": {
-      "created_at": "2025-02-01T09:00:00Z",
-      "updated_at": "2025-02-01T09:00:00Z",
-      "phase": "ideation"
+    "status": {
+      "phase": "ideation",
+      "last_updated": "2025-01-15T09:00:00Z",
+      "checks": {
+        "script_reviewed": false,
+        "voiceover_ready": false,
+        "assets_ready": false,
+        "render_ready": false,
+        "published": false
+      }
     }
   }
 }

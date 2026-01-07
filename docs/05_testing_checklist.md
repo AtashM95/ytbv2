@@ -12,52 +12,45 @@
 9. WF-07 Render Orchestration
 10. WF-08 YouTube Publish
 
-## Manual test addımları və gözlənən nəticələr
-### WF-09
-- Addım: `youtube.channel_id` üçün setting yaradın.
-- Gözlənən: DB-də entry yaranır, `value_type=string`.
-- Addım: `youtube.api_credentials` üçün `credential_ref` əlavə edin.
-- Gözlənən: `value` boş, `credential_ref` doludur.
+## Ümumi yoxlamalar
+- Config DB bağlantısı işləkdir.
+- Credentials provider aktivdir və referanslar işləyir.
+- Storage endpoint-lər əlçatandır.
+- Audit log-lar yazılır.
 
-### WF-10
-- Addım: `environment=staging` ilə çağırın.
-- Gözlənən: `resolved_config.environment=staging` və `schema_version` mövcuddur.
-- Addım: `runtime_overrides.publish.publish_enabled=false` göndərin.
-- Gözlənən: çıxışda `publish.publish_enabled=false`.
-
+## Workflow-specific testlər
 ### WF-01
-- Addım: Yeni topic ilə run yaradın.
-- Gözlənən: `run_id` yaranır, `timestamps.phase=ideation`.
+- Yeni run yaradılması və manifest-in dolması.
+- Invalid input ssenariləri.
 
 ### WF-02
-- Addım: 2 mənbə əlavə edin.
-- Gözlənən: `topic.source_references` 2 elementdən ibarətdir.
+- Mənbə əlavə edilməsi və license yoxlaması.
 
 ### WF-03
-- Addım: Script draft yaradın.
-- Gözlənən: `script.draft` dolur, `timestamps.phase=script_draft`.
+- Script generation və min/max söz sayı validasiyası.
 
 ### WF-04
-- Addım: Script approval edin və review notes yazın.
-- Gözlənən: `script.approved` və `script.review_notes` yenilənir, `timestamps.phase=script_approved`.
+- Review approval flow və script dəyişiklikləri.
 
 ### WF-05
-- Addım: Voiceover yaradın.
-- Gözlənən: `assets.voiceover.voiceover_url_signed` dolur, `timestamps.phase=voiceover_ready`.
+- Voiceover yaratma və signed URL.
 
 ### WF-06
-- Addım: Asset download və timeline qurun.
-- Gözlənən: `assets.items` və `scene_assets` dolur, `timestamps.phase=assets_ready`.
+- Asset download və checksum təsdiqi.
 
 ### WF-07
-- Addım: Render job göndərin və statusu tamamlayın.
-- Gözlənən: `render.render_id` və `render.render_status=completed`, `timestamps.phase=render_ready`.
+- Render job submission və status polling.
 
 ### WF-08
-- Addım: Publish enable olduqda upload edin.
-- Gözlənən: `publish.youtube_video_id` dolur, `publish.publish_status=published`, `timestamps.phase=published`.
+- YouTube upload və metadata tətbiqi.
+
+### WF-09
+- Settings update və credential policy yoxlaması.
+
+### WF-10
+- Config resolve və required key yoxlaması.
 
 ## Golden sample yoxlamaları
-- `exports/golden_samples/new_run.json` run yaradılması ilə uyğun olmalıdır.
-- `exports/golden_samples/rendered.json` render tamamlanması ilə uyğun olmalıdır.
-- `exports/golden_samples/published.json` publish mərhələsi ilə uyğun olmalıdır.
+- `exports/golden_samples/new_run.json` yeni run strukturu ilə müqayisə olunur.
+- `exports/golden_samples/rendered.json` render mərhələsi ilə müqayisə olunur.
+- `exports/golden_samples/published.json` publish mərhələsi ilə müqayisə olunur.

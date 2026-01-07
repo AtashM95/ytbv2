@@ -1,114 +1,83 @@
 {
-  "run_id": "run_20250202_0012",
+  "run_id": "run_20250115_0009",
   "mode": "production",
   "scene_assets": [
     {
-      "asset_id": "asset_0401",
+      "asset_id": "asset_1001",
       "type": "image",
-      "source_url": "https://cdn.example.com/source/clouds.png",
-      "local_path": "/mnt/assets/run_20250202_0012/clouds.png",
+      "source_url": "https://cdn.example.com/sources/water_cycle.png",
+      "local_path": "/mnt/assets/run_20250115_0009/water_cycle.png",
       "checksum_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "duration_sec": 6.0,
+      "duration_sec": 5.0,
       "metadata": {
         "license": "CC-BY-4.0",
         "attribution": "NOAA",
-        "tags": ["clouds", "atmosphere", "image"]
+        "tags": ["water", "cycle", "diagram"]
       }
     }
   ],
-  "voiceover_url_signed": "https://storage.example.com/voiceover/run_20250202_0012.mp3?sig=vo123",
-  "render_id": "render_00ab91",
+  "voiceover_url_signed": "https://storage.example.com/voiceover/run_20250115_0009.mp3?sig=voice123",
+  "render_id": "render_aa19f0",
   "youtube_video_id": null,
   "manifest": {
     "manifest_version": "2.0",
-    "topic": {
-      "title": "Buludların yaranması",
-      "category": "education",
+    "project": {
+      "title": "Su Dövranı",
       "language": "az",
-      "keywords": ["bulud", "su dövranı", "atmosfer"],
-      "summary": "Buludların necə yarandığını izah edən video",
-      "source_references": [
+      "category": "education",
+      "created_at": "2025-01-15T10:00:00Z"
+    },
+    "content": {
+      "topic": "Su dövranının mərhələləri",
+      "keywords": ["su", "dövran", "yağıntı"],
+      "summary": "Buxarlanma, kondensasiya və yağıntı prosesləri",
+      "script": "Ssenari təsdiqlənib və voiceover yaradılıb.",
+      "sources": [
         {
-          "title": "Cloud Formation",
-          "url": "https://example.org/clouds",
+          "title": "Water Cycle Basics",
+          "url": "https://example.org/water-cycle",
           "license": "CC-BY-4.0"
         }
       ]
     },
-    "script": {
-      "draft": "Ssenari yazılıb və təsdiq üçün hazırdır.",
-      "approved": "Ssenari təsdiqlənib.",
-      "review_notes": ["Terminlər sadələşdirildi"],
-      "last_reviewed_at": "2025-02-02T11:00:00Z"
-    },
-    "assets": {
-      "scene_plan": [
-        {"scene": 1, "description": "Bulud şəkli", "duration_sec": 6.0}
-      ],
-      "items": [
-        {
-          "asset_id": "asset_0401",
-          "type": "image",
-          "source_url": "https://cdn.example.com/source/clouds.png",
-          "local_path": "/mnt/assets/run_20250202_0012/clouds.png",
-          "checksum_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-          "duration_sec": 6.0,
-          "metadata": {
-            "license": "CC-BY-4.0",
-            "attribution": "NOAA",
-            "tags": ["clouds", "atmosphere", "image"]
-          }
-        }
-      ],
+    "production": {
       "voiceover": {
         "provider": "acme-tts",
         "voice_id": "az-01",
         "speed": 1.0,
         "pitch": 0.0,
-        "output_format": "mp3",
-        "voiceover_url_signed": "https://storage.example.com/voiceover/run_20250202_0012.mp3?sig=vo123"
+        "output_format": "mp3"
+      },
+      "visual_style": {
+        "theme": "clean",
+        "aspect_ratio": "16:9",
+        "palette": ["#0EA5E9", "#F97316", "#F8FAFC"]
+      },
+      "render": {
+        "resolution": "1920x1080",
+        "fps": 30,
+        "codec": "h264",
+        "bitrate_kbps": 9000
       }
     },
-    "render": {
-      "resolution": "1920x1080",
-      "fps": 30,
-      "codec": "h264",
-      "bitrate_kbps": 9000,
-      "render_id": "render_00ab91",
-      "render_status": "completed"
-    },
-    "publish": {
+    "publication": {
       "channel_id": "channel_456",
-      "title": "Buludlar Necə Yaranır?",
-      "description": "Buludların yaranma prosesi haqqında qısa video",
-      "tags": ["elm", "atmosfer"],
+      "title": "Su Dövranı: Qısa İzah",
+      "description": "Su dövranı haqqında maarifləndirici video",
+      "tags": ["təbiət", "elm"],
       "privacy": "public",
-      "scheduled_at": null,
-      "youtube_video_id": null,
-      "publish_status": "not_published"
+      "scheduled_at": null
     },
-    "analytics": {
-      "enabled": true,
-      "tracking_tags": ["foundation"],
-      "first_publish_at": null,
-      "last_metrics_pull_at": null,
-      "metrics": {}
-    },
-    "audit": {
-      "created_by": "wf-01",
-      "updated_by": "wf-07",
-      "change_log": [
-        {"at": "2025-02-02T09:00:00Z", "by": "wf-01", "change": "run created"},
-        {"at": "2025-02-02T11:00:00Z", "by": "wf-04", "change": "script approved"},
-        {"at": "2025-02-02T13:00:00Z", "by": "wf-05", "change": "voiceover generated"},
-        {"at": "2025-02-02T14:00:00Z", "by": "wf-06", "change": "assets prepared"},
-        {"at": "2025-02-02T15:30:00Z", "by": "wf-07", "change": "render completed"}
-      ]
-    },
-    "timestamps": {
-      "created_at": "2025-02-02T09:00:00Z",
-      "updated_at": "2025-02-02T15:30:00Z",
-      "phase": "render_ready"
+    "status": {
+      "phase": "render_ready",
+      "last_updated": "2025-01-15T14:30:00Z",
+      "checks": {
+        "script_reviewed": true,
+        "voiceover_ready": true,
+        "assets_ready": true,
+        "render_ready": true,
+        "published": false
+      }
     }
   }
 }
