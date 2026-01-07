@@ -1,0 +1,90 @@
+{
+  "name": "WF-03 Script Draft",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "1",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "contract_json",
+              "value": "{\n  \"run_id\": \"run_20250201_0001\",\n  \"mode\": \"staging\",\n  \"scene_assets\": [],\n  \"voiceover_url_signed\": null,\n  \"render_id\": null,\n  \"youtube_video_id\": null,\n  \"manifest\": {\n    \"manifest_version\": \"2.0\",\n    \"topic\": {\n      \"title\": \"Su dövranı necə işləyir\",\n      \"category\": \"education\",\n      \"language\": \"az\",\n      \"keywords\": [\"su\", \"dövran\", \"təbiət\"],\n      \"summary\": \"Su dövranının əsas mərhələləri haqqında qısa izah\",\n      \"source_references\": [\n        {\"title\": \"Water Cycle Basics\", \"url\": \"https://example.org/water-cycle\", \"license\": \"CC-BY-4.0\"}\n      ]\n    },\n    \"script\": {\n      \"draft\": \"\",\n      \"approved\": \"\",\n      \"review_notes\": [],\n      \"last_reviewed_at\": null\n    },\n    \"assets\": {\n      \"scene_plan\": [],\n      \"items\": [],\n      \"voiceover\": {\n        \"provider\": \"\",\n        \"voice_id\": \"\",\n        \"speed\": 1.0,\n        \"pitch\": 0.0,\n        \"output_format\": \"mp3\",\n        \"voiceover_url_signed\": null\n      }\n    },\n    \"render\": {\n      \"resolution\": \"1920x1080\",\n      \"fps\": 30,\n      \"codec\": \"h264\",\n      \"bitrate_kbps\": 8000,\n      \"render_id\": null,\n      \"render_status\": \"not_started\"\n    },\n    \"publish\": {\n      \"channel_id\": \"\",\n      \"title\": \"\",\n      \"description\": \"\",\n      \"tags\": [],\n      \"privacy\": \"unlisted\",\n      \"scheduled_at\": null,\n      \"youtube_video_id\": null,\n      \"publish_status\": \"not_published\"\n    },\n    \"analytics\": {\n      \"enabled\": true,\n      \"tracking_tags\": [],\n      \"first_publish_at\": null,\n      \"last_metrics_pull_at\": null,\n      \"metrics\": {}\n    },\n    \"audit\": {\n      \"created_by\": \"wf-01\",\n      \"updated_by\": \"wf-02\",\n      \"change_log\": [\n        {\n          \"at\": \"2025-02-01T09:00:00Z\",\n          \"by\": \"wf-01\",\n          \"change\": \"run created\"\n        },\n        {\n          \"at\": \"2025-02-01T09:30:00Z\",\n          \"by\": \"wf-02\",\n          \"change\": \"sources added\"\n        }\n      ]\n    },\n    \"timestamps\": {\n      \"created_at\": \"2025-02-01T09:00:00Z\",\n      \"updated_at\": \"2025-02-01T09:30:00Z\",\n      \"phase\": \"research\"\n    }\n  }\n}"
+            },
+            {
+              "name": "prompt_hint",
+              "value": "Bu video üçün 90-120 saniyəlik qısa ssenari yaz."
+            },
+            {
+              "name": "environment",
+              "value": "staging"
+            }
+          ]
+        }
+      },
+      "id": "2",
+      "name": "Set Sample Input",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const now = new Date().toISOString();\nconst input = $json;\n\ntry {\n  const contract = input.contract_json ? JSON.parse(input.contract_json) : input;\n  const resolvedConfig = contract.resolved_config || {\n    environment: input.environment || 'staging',\n    publish: {\n      publish_enabled: false,\n      privacy_default: 'unlisted',\n      channel_id: '',\n      credentials: { type: 'credential_ref', ref: 'cred_youtube_api' }\n    },\n    storage: {\n      base_url: 'https://storage.example.com',\n      signing_key: { type: 'credential_ref', ref: 'cred_storage_signing' },\n      asset_bucket: 'ytb-assets'\n    },\n    tts: {\n      provider: 'acme-tts',\n      api_key: { type: 'credential_ref', ref: 'cred_tts_api' },\n      default_voice_id: 'az-01'\n    },\n    render: {\n      endpoint: 'https://render.example.com',\n      api_key: { type: 'credential_ref', ref: 'cred_render_api' },\n      timeout_sec: 1800\n    },\n    branding: {\n      default_tags: ['elm', 'maarif', 'azərbaycanca'],\n      channel_name: 'Helal Elm'\n    },\n    runtime: {\n      dry_run: contract.mode === 'dry_run',\n      publish_off: true\n    }\n  };\n\n  if (!contract.manifest || !contract.manifest.topic) {\n    throw new Error('invalid_manifest');\n  }\n\n  contract.manifest.audit.change_log.push({\n    at: now,\n    by: 'wf-03',\n    change: `step=wf-03 status=STARTED run_id=${contract.run_id} mode=${contract.mode}`\n  });\n\n  const baseSummary = contract.manifest.topic.summary || '';\n  const keywords = Array.isArray(contract.manifest.topic.keywords) ? contract.manifest.topic.keywords.join(', ') : '';\n  const sources = Array.isArray(contract.manifest.topic.source_references) ? contract.manifest.topic.source_references : [];\n  const sourceTitles = sources.map((item) => item.title).filter(Boolean).join(', ');\n  const prompt = `${input.prompt_hint || ''} Mövzu: ${contract.manifest.topic.title}. Xülasə: ${baseSummary}. Açar sözlər: ${keywords}. Mənbələr: ${sourceTitles}.`;\n\n  const draft = `Ssenari layihəsi: ${prompt}`.trim();\n\n  if (draft.length < 60) {\n    throw new Error('script_length_invalid');\n  }\n\n  contract.manifest.script.draft = draft;\n  contract.manifest.timestamps.phase = 'script_draft';\n  contract.manifest.timestamps.updated_at = now;\n\n  contract.manifest.audit.change_log.push({\n    at: now,\n    by: 'wf-03',\n    change: `step=wf-03 status=COMPLETED run_id=${contract.run_id} mode=${contract.mode} script_length=${draft.length}`\n  });\n\n  return [\n    {\n      json: {\n        run_id: contract.run_id,\n        mode: contract.mode,\n        scene_assets: contract.scene_assets,\n        voiceover_url_signed: contract.voiceover_url_signed,\n        render_id: contract.render_id,\n        youtube_video_id: contract.youtube_video_id,\n        manifest: contract.manifest,\n        resolved_config: resolvedConfig,\n        worker: 'WF-03',\n        status: 'COMPLETED',\n        output_summary: `updated script.draft (${draft.length} chars)`\n      }\n    }\n  ];\n} catch (error) {\n  const message = error && error.message ? error.message : 'unknown_error';\n  const fallback = input.contract_json ? JSON.parse(input.contract_json) : input;\n  if (fallback.manifest && fallback.manifest.timestamps) {\n    fallback.manifest.timestamps.phase = 'failed_wf_03';\n    fallback.manifest.timestamps.updated_at = now;\n    fallback.manifest.audit.change_log.push({\n      at: now,\n      by: 'wf-03',\n      change: `step=wf-03 status=FAILED error_code=FAILED_WF_03 error_message=${message} run_id=${fallback.run_id} mode=${fallback.mode}`\n    });\n  }\n  return [\n    {\n      json: {\n        run_id: fallback.run_id || null,\n        mode: fallback.mode || null,\n        scene_assets: fallback.scene_assets || [],\n        voiceover_url_signed: fallback.voiceover_url_signed || null,\n        render_id: fallback.render_id || null,\n        youtube_video_id: fallback.youtube_video_id || null,\n        manifest: fallback.manifest || null,\n        resolved_config: fallback.resolved_config || null,\n        worker: 'WF-03',\n        status: 'FAILED_WF_03',\n        output_summary: `error=${message}`\n      }\n    }\n  ];\n}"
+      },
+      "id": "3",
+      "name": "Generate Script Draft",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set Sample Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Sample Input": {
+      "main": [
+        [
+          {
+            "node": "Generate Script Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "00000000-0000-0000-0000-000000000003",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "3"
+}
