@@ -1,0 +1,183 @@
+{
+  "name": "WF-10 Get Config",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wf-10-get-config",
+        "responseMode": "lastNode",
+        "options": {
+          "responseData": "firstEntryJson"
+        }
+      },
+      "id": "1",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $json;\nconst environment = input.environment || 'staging';\nconst scope = input.scope || 'global';\nconst channelId = input.channel_id || null;\nconst runtimeOverrides = input.runtime_overrides || {};\n\nreturn [\n  {\n    json: {\n      run_id: input.run_id || null,\n      mode: input.mode || null,\n      scene_assets: input.scene_assets || [],\n      voiceover_url_signed: input.voiceover_url_signed || null,\n      render_id: input.render_id || null,\n      youtube_video_id: input.youtube_video_id || null,\n      manifest: input.manifest || null,\n      environment,\n      scope,\n      channel_id: channelId,\n      runtime_overrides: runtimeOverrides\n    }\n  }\n];"
+      },
+      "id": "2",
+      "name": "Normalize Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $json;\n\nconst defaults = {\n  environment: input.environment,\n  publish: {\n    publish_enabled: true,\n    privacy_default: 'public',\n    channel_id: input.channel_id || '',\n    credentials: {\n      type: 'credential_ref',\n      ref: 'cred_youtube_api'\n    }\n  },\n  storage: {\n    base_url: 'https://storage.example.com',\n    signing_key: {\n      type: 'credential_ref',\n      ref: 'cred_storage_signing'\n    },\n    asset_bucket: 'ytb-assets'\n  },\n  tts: {\n    provider: 'acme-tts',\n    api_key: {\n      type: 'credential_ref',\n      ref: 'cred_tts_api'\n    },\n    default_voice_id: 'az-01'\n  },\n  render: {\n    endpoint: 'https://render.example.com',\n    api_key: {\n      type: 'credential_ref',\n      ref: 'cred_render_api'\n    },\n    timeout_sec: 1800\n  },\n  branding: {\n    default_tags: ['elm', 'maarif', 'azərbaycanca'],\n    channel_name: 'Helal Elm'\n  },\n  runtime: {\n    dry_run: input.mode === 'dry_run',\n    publish_off: false\n  }\n};\n\nreturn [\n  {\n    json: {\n      ...input,\n      defaults\n    }\n  }\n];"
+      },
+      "id": "3",
+      "name": "Load Defaults",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT key, value, value_type, credential_ref, scope, environment, is_active FROM ytb_settings WHERE environment = {{$json.environment}} AND is_active = true AND (scope = {{$json.scope}} OR scope = 'global');"
+      },
+      "id": "4",
+      "name": "Query Config DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        780,
+        0
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $node['Load Defaults'].json;\nconst dbItems = $items('Query Config DB');\nconst usedDb = Array.isArray(dbItems) && dbItems.length > 0 && !dbItems[0].json.error;\n\nfunction setNested(obj, path, value) {\n  const parts = path.split('.');\n  let current = obj;\n  for (let i = 0; i < parts.length - 1; i += 1) {\n    const key = parts[i];\n    if (!current[key] || typeof current[key] !== 'object') {\n      current[key] = {};\n    }\n    current = current[key];\n  }\n  current[parts[parts.length - 1]] = value;\n}\n\nfunction parseValue(row) {\n  if (row.value_type === 'credential_ref') {\n    return { type: 'credential_ref', ref: row.credential_ref };\n  }\n  if (row.value_type === 'number') {\n    return Number(row.value);\n  }\n  if (row.value_type === 'boolean') {\n    return row.value === 'true' || row.value === true;\n  }\n  if (row.value_type === 'json') {\n    return JSON.parse(row.value);\n  }\n  return row.value;\n}\n\nconst merged = JSON.parse(JSON.stringify(input.defaults));\n\nif (usedDb) {\n  for (const item of dbItems) {\n    const row = item.json;\n    if (!row || !row.key) continue;\n    const value = parseValue(row);\n    setNested(merged, row.key, value);\n  }\n}\n\nreturn [\n  {\n    json: {\n      ...input,\n      merged_config: merged,\n      used_db: usedDb\n    }\n  }\n];"
+      },
+      "id": "5",
+      "name": "Merge DB Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $json;\nconst overrides = input.runtime_overrides || {};\n\nfunction deepMerge(target, source) {\n  for (const key of Object.keys(source)) {\n    const value = source[key];\n    if (value && typeof value === 'object' && !Array.isArray(value)) {\n      if (!target[key]) target[key] = {};\n      deepMerge(target[key], value);\n    } else {\n      target[key] = value;\n    }\n  }\n}\n\nconst resolved = JSON.parse(JSON.stringify(input.merged_config));\nconst usedOverrides = Object.keys(overrides).length > 0;\nif (usedOverrides) {\n  deepMerge(resolved, overrides);\n}\n\nlet configSource = 'defaults';\nif (input.used_db && usedOverrides) configSource = 'defaults+db+override';\nif (input.used_db && !usedOverrides) configSource = 'defaults+db';\nif (!input.used_db && usedOverrides) configSource = 'defaults+override';\n\nconst summary = {\n  used_defaults: true,\n  used_db: input.used_db,\n  used_overrides: usedOverrides,\n  scope: input.scope,\n  channel_id: resolved.publish?.channel_id || null,\n  resolved_keys: ['publish', 'storage', 'tts', 'render', 'branding', 'runtime']\n};\n\nreturn [\n  {\n    json: {\n      ...input,\n      resolved_config: resolved,\n      config_source: configSource,\n      effective_config_summary: summary\n    }\n  }\n];"
+      },
+      "id": "6",
+      "name": "Apply Overrides",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1300,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $json;\nconst resolvedAt = new Date().toISOString();\n\nreturn [\n  {\n    json: {\n      run_id: input.run_id,\n      mode: input.mode,\n      scene_assets: input.scene_assets,\n      voiceover_url_signed: input.voiceover_url_signed,\n      render_id: input.render_id,\n      youtube_video_id: input.youtube_video_id,\n      manifest: input.manifest,\n      resolved_config: input.resolved_config,\n      config_source: input.config_source,\n      effective_config_summary: input.effective_config_summary,\n      scope: input.scope,\n      channel_id: input.channel_id,\n      resolved_at: resolvedAt,\n      schema_version: '1.0'\n    }\n  }\n];"
+      },
+      "id": "7",
+      "name": "Build Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Input": {
+      "main": [
+        [
+          {
+            "node": "Load Defaults",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Defaults": {
+      "main": [
+        [
+          {
+            "node": "Query Config DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Config DB": {
+      "main": [
+        [
+          {
+            "node": "Merge DB Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge DB Config": {
+      "main": [
+        [
+          {
+            "node": "Apply Overrides",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apply Overrides": {
+      "main": [
+        [
+          {
+            "node": "Build Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "00000000-0000-0000-0000-000000000010",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "10"
+}

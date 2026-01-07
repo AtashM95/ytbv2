@@ -1,0 +1,86 @@
+{
+  "name": "WF-08 YouTube Publish",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "1",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "contract_json",
+              "value": "{\n  \"run_id\": \"run_20250201_0001\",\n  \"mode\": \"staging\",\n  \"scene_assets\": [\n    {\n      \"asset_id\": \"asset_run_20250201_0001_001\",\n      \"type\": \"image\",\n      \"source_url\": \"https://cdn.example.com/source/water_cycle.png\",\n      \"local_path\": \"/mnt/assets/run_20250201_0001/water_cycle.png\",\n      \"checksum_sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n      \"duration_sec\": 6.0,\n      \"metadata\": {\n        \"license\": \"CC-BY-4.0\",\n        \"attribution\": \"NOAA\",\n        \"tags\": [\"water\", \"cycle\", \"diagram\"]\n      }\n    }\n  ],\n  \"voiceover_url_signed\": \"https://storage.example.com/voiceover/run_20250201_0001.mp3?sig=simulated\",\n  \"render_id\": \"render_run_20250201_0001\",\n  \"youtube_video_id\": null,\n  \"manifest\": {\n    \"manifest_version\": \"2.0\",\n    \"topic\": {\n      \"title\": \"Su dövranı necə işləyir\",\n      \"category\": \"education\",\n      \"language\": \"az\",\n      \"keywords\": [\"su\", \"dövran\", \"təbiət\"],\n      \"summary\": \"Su dövranının əsas mərhələləri haqqında qısa izah\",\n      \"source_references\": [\n        {\"title\": \"Water Cycle Basics\", \"url\": \"https://example.org/water-cycle\", \"license\": \"CC-BY-4.0\"}\n      ]\n    },\n    \"script\": {\n      \"draft\": \"Ssenari layihəsi: Su dövranı haqqında 90 saniyəlik qısa ssenari.\",\n      \"approved\": \"Ssenari təsdiqləndi: Su dövranı haqqında qısa və aydın izah.\",\n      \"review_notes\": [\"Terminləri sadələşdir\"],\n      \"last_reviewed_at\": \"2025-02-01T10:30:00Z\"\n    },\n    \"assets\": {\n      \"scene_plan\": [\n        {\"scene\": 1, \"description\": \"Su dövranı diaqramı\", \"duration_sec\": 6.0}\n      ],\n      \"items\": [\n        {\n          \"asset_id\": \"asset_run_20250201_0001_001\",\n          \"type\": \"image\",\n          \"source_url\": \"https://cdn.example.com/source/water_cycle.png\",\n          \"local_path\": \"/mnt/assets/run_20250201_0001/water_cycle.png\",\n          \"checksum_sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n          \"duration_sec\": 6.0,\n          \"metadata\": {\n            \"license\": \"CC-BY-4.0\",\n            \"attribution\": \"NOAA\",\n            \"tags\": [\"water\", \"cycle\", \"diagram\"]\n          }\n        }\n      ],\n      \"voiceover\": {\n        \"provider\": \"acme-tts\",\n        \"voice_id\": \"az-01\",\n        \"speed\": 1.0,\n        \"pitch\": 0.0,\n        \"output_format\": \"mp3\",\n        \"voiceover_url_signed\": \"https://storage.example.com/voiceover/run_20250201_0001.mp3?sig=simulated\"\n      }\n    },\n    \"render\": {\n      \"resolution\": \"1920x1080\",\n      \"fps\": 30,\n      \"codec\": \"h264\",\n      \"bitrate_kbps\": 8000,\n      \"render_id\": \"render_run_20250201_0001\",\n      \"render_status\": \"completed\"\n    },\n    \"publish\": {\n      \"channel_id\": \"\",\n      \"title\": \"Su Dövranı: Qısa İzah\",\n      \"description\": \"Su dövranı haqqında maarifləndirici video\",\n      \"tags\": [\"elm\", \"təbiət\"],\n      \"privacy\": \"public\",\n      \"scheduled_at\": null,\n      \"youtube_video_id\": null,\n      \"publish_status\": \"not_published\"\n    },\n    \"analytics\": {\n      \"enabled\": true,\n      \"tracking_tags\": [],\n      \"first_publish_at\": null,\n      \"last_metrics_pull_at\": null,\n      \"metrics\": {}\n    },\n    \"audit\": {\n      \"created_by\": \"wf-01\",\n      \"updated_by\": \"wf-07\",\n      \"change_log\": [\n        {\"at\": \"2025-02-01T09:00:00Z\", \"by\": \"wf-01\", \"change\": \"run created\"},\n        {\"at\": \"2025-02-01T12:00:00Z\", \"by\": \"wf-07\", \"change\": \"render completed\"}\n      ]\n    },\n    \"timestamps\": {\n      \"created_at\": \"2025-02-01T09:00:00Z\",\n      \"updated_at\": \"2025-02-01T12:00:00Z\",\n      \"phase\": \"render_ready\"\n    }\n  }\n}"
+            },
+            {
+              "name": "environment",
+              "value": "staging"
+            }
+          ]
+        }
+      },
+      "id": "2",
+      "name": "Set Sample Input",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const now = new Date().toISOString();\nconst input = $json;\n\ntry {\n  const contract = input.contract_json ? JSON.parse(input.contract_json) : input;\n  const resolvedConfig = contract.resolved_config || {\n    environment: input.environment || 'staging',\n    publish: {\n      publish_enabled: false,\n      privacy_default: 'unlisted',\n      channel_id: '',\n      credentials: { type: 'credential_ref', ref: 'cred_youtube_api' }\n    },\n    storage: {\n      base_url: 'https://storage.example.com',\n      signing_key: { type: 'credential_ref', ref: 'cred_storage_signing' },\n      asset_bucket: 'ytb-assets'\n    },\n    tts: {\n      provider: 'acme-tts',\n      api_key: { type: 'credential_ref', ref: 'cred_tts_api' },\n      default_voice_id: 'az-01'\n    },\n    render: {\n      endpoint: 'https://render.example.com',\n      api_key: { type: 'credential_ref', ref: 'cred_render_api' },\n      timeout_sec: 1800\n    },\n    branding: {\n      default_tags: ['elm', 'maarif', 'azərbaycanca'],\n      channel_name: 'Helal Elm'\n    },\n    runtime: {\n      dry_run: contract.mode === 'dry_run',\n      publish_off: true\n    }\n  };\n\n  if (!contract.manifest || !contract.manifest.publish) {\n    throw new Error('invalid_manifest');\n  }\n\n  contract.manifest.audit.change_log.push({\n    at: now,\n    by: 'wf-08',\n    change: `step=wf-08 status=STARTED run_id=${contract.run_id} mode=${contract.mode}`\n  });\n\n  const publishEnabled = resolvedConfig.publish && resolvedConfig.publish.publish_enabled === true;\n  const publishOff = resolvedConfig.runtime && resolvedConfig.runtime.publish_off === true;\n  const isDryRun = resolvedConfig.runtime && resolvedConfig.runtime.dry_run === true;\n\n  if (!publishEnabled || publishOff || isDryRun) {\n    contract.manifest.publish.publish_status = 'not_published';\n    contract.manifest.publish.youtube_video_id = null;\n    contract.youtube_video_id = null;\n    contract.manifest.timestamps.phase = 'render_ready';\n    contract.manifest.timestamps.updated_at = now;\n\n    contract.manifest.audit.change_log.push({\n      at: now,\n      by: 'wf-08',\n      change: `step=wf-08 status=COMPLETED run_id=${contract.run_id} mode=${contract.mode} publish_skipped=true`\n    });\n\n    return [\n      {\n        json: {\n          run_id: contract.run_id,\n          mode: contract.mode,\n          scene_assets: contract.scene_assets,\n          voiceover_url_signed: contract.voiceover_url_signed,\n          render_id: contract.render_id,\n          youtube_video_id: contract.youtube_video_id,\n          manifest: contract.manifest,\n          resolved_config: resolvedConfig,\n          worker: 'WF-08',\n          status: 'COMPLETED',\n          output_summary: 'publish skipped due to config flags'\n        }\n      }\n    ];\n  }\n\n  const videoId = `yt_${contract.run_id}`;\n  contract.youtube_video_id = videoId;\n  contract.manifest.publish.youtube_video_id = videoId;\n  contract.manifest.publish.publish_status = 'published';\n  contract.manifest.timestamps.phase = 'published';\n  contract.manifest.timestamps.updated_at = now;\n\n  contract.manifest.audit.change_log.push({\n    at: now,\n    by: 'wf-08',\n    change: `step=wf-08 status=COMPLETED run_id=${contract.run_id} mode=${contract.mode} youtube_video_id=${videoId}`\n  });\n\n  return [\n    {\n      json: {\n        run_id: contract.run_id,\n        mode: contract.mode,\n        scene_assets: contract.scene_assets,\n        voiceover_url_signed: contract.voiceover_url_signed,\n        render_id: contract.render_id,\n        youtube_video_id: contract.youtube_video_id,\n        manifest: contract.manifest,\n        resolved_config: resolvedConfig,\n        worker: 'WF-08',\n        status: 'COMPLETED',\n        output_summary: `published youtube_video_id=${videoId}`\n      }\n    }\n  ];\n} catch (error) {\n  const message = error && error.message ? error.message : 'unknown_error';\n  const fallback = input.contract_json ? JSON.parse(input.contract_json) : input;\n  if (fallback.manifest && fallback.manifest.timestamps) {\n    fallback.manifest.timestamps.phase = 'failed_wf_08';\n    fallback.manifest.timestamps.updated_at = now;\n    fallback.manifest.audit.change_log.push({\n      at: now,\n      by: 'wf-08',\n      change: `step=wf-08 status=FAILED error_code=FAILED_WF_08 error_message=${message} run_id=${fallback.run_id} mode=${fallback.mode}`\n    });\n  }\n  return [\n    {\n      json: {\n        run_id: fallback.run_id || null,\n        mode: fallback.mode || null,\n        scene_assets: fallback.scene_assets || [],\n        voiceover_url_signed: fallback.voiceover_url_signed || null,\n        render_id: fallback.render_id || null,\n        youtube_video_id: fallback.youtube_video_id || null,\n        manifest: fallback.manifest || null,\n        resolved_config: fallback.resolved_config || null,\n        worker: 'WF-08',\n        status: 'FAILED_WF_08',\n        output_summary: `error=${message}`\n      }\n    }\n  ];\n}"
+      },
+      "id": "3",
+      "name": "Publish Video",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set Sample Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Sample Input": {
+      "main": [
+        [
+          {
+            "node": "Publish Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "00000000-0000-0000-0000-000000000008",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "8"
+}
