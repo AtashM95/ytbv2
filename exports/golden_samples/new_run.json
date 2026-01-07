@@ -1,0 +1,63 @@
+{
+  "run_id": "run_20250115_0001",
+  "mode": "staging",
+  "scene_assets": [],
+  "voiceover_url_signed": null,
+  "render_id": null,
+  "youtube_video_id": null,
+  "manifest": {
+    "manifest_version": "2.0",
+    "project": {
+      "title": "Helal Elmi Faktlar",
+      "language": "az",
+      "category": "education",
+      "created_at": "2025-01-15T09:00:00Z"
+    },
+    "content": {
+      "topic": "Su dövranı necə işləyir",
+      "keywords": ["su", "dövran", "təbiət"],
+      "summary": "Su dövranının əsas mərhələləri haqqında qısa izah",
+      "script": "",
+      "sources": []
+    },
+    "production": {
+      "voiceover": {
+        "provider": "",
+        "voice_id": "",
+        "speed": 1.0,
+        "pitch": 0.0,
+        "output_format": "mp3"
+      },
+      "visual_style": {
+        "theme": "minimal",
+        "aspect_ratio": "16:9",
+        "palette": ["#0F172A", "#22D3EE", "#F8FAFC"]
+      },
+      "render": {
+        "resolution": "1920x1080",
+        "fps": 30,
+        "codec": "h264",
+        "bitrate_kbps": 8000
+      }
+    },
+    "publication": {
+      "channel_id": "",
+      "title": "",
+      "description": "",
+      "tags": [],
+      "privacy": "unlisted",
+      "scheduled_at": null
+    },
+    "status": {
+      "phase": "ideation",
+      "last_updated": "2025-01-15T09:00:00Z",
+      "checks": {
+        "script_reviewed": false,
+        "voiceover_ready": false,
+        "assets_ready": false,
+        "render_ready": false,
+        "published": false
+      }
+    }
+  }
+}

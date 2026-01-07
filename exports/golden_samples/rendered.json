@@ -1,0 +1,83 @@
+{
+  "run_id": "run_20250115_0009",
+  "mode": "production",
+  "scene_assets": [
+    {
+      "asset_id": "asset_1001",
+      "type": "image",
+      "source_url": "https://cdn.example.com/sources/water_cycle.png",
+      "local_path": "/mnt/assets/run_20250115_0009/water_cycle.png",
+      "checksum_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "duration_sec": 5.0,
+      "metadata": {
+        "license": "CC-BY-4.0",
+        "attribution": "NOAA",
+        "tags": ["water", "cycle", "diagram"]
+      }
+    }
+  ],
+  "voiceover_url_signed": "https://storage.example.com/voiceover/run_20250115_0009.mp3?sig=voice123",
+  "render_id": "render_aa19f0",
+  "youtube_video_id": null,
+  "manifest": {
+    "manifest_version": "2.0",
+    "project": {
+      "title": "Su Dövranı",
+      "language": "az",
+      "category": "education",
+      "created_at": "2025-01-15T10:00:00Z"
+    },
+    "content": {
+      "topic": "Su dövranının mərhələləri",
+      "keywords": ["su", "dövran", "yağıntı"],
+      "summary": "Buxarlanma, kondensasiya və yağıntı prosesləri",
+      "script": "Ssenari təsdiqlənib və voiceover yaradılıb.",
+      "sources": [
+        {
+          "title": "Water Cycle Basics",
+          "url": "https://example.org/water-cycle",
+          "license": "CC-BY-4.0"
+        }
+      ]
+    },
+    "production": {
+      "voiceover": {
+        "provider": "acme-tts",
+        "voice_id": "az-01",
+        "speed": 1.0,
+        "pitch": 0.0,
+        "output_format": "mp3"
+      },
+      "visual_style": {
+        "theme": "clean",
+        "aspect_ratio": "16:9",
+        "palette": ["#0EA5E9", "#F97316", "#F8FAFC"]
+      },
+      "render": {
+        "resolution": "1920x1080",
+        "fps": 30,
+        "codec": "h264",
+        "bitrate_kbps": 9000
+      }
+    },
+    "publication": {
+      "channel_id": "channel_456",
+      "title": "Su Dövranı: Qısa İzah",
+      "description": "Su dövranı haqqında maarifləndirici video",
+      "tags": ["təbiət", "elm"],
+      "privacy": "public",
+      "scheduled_at": null
+    },
+    "status": {
+      "phase": "render_ready",
+      "last_updated": "2025-01-15T14:30:00Z",
+      "checks": {
+        "script_reviewed": true,
+        "voiceover_ready": true,
+        "assets_ready": true,
+        "render_ready": true,
+        "published": false
+      }
+    }
+  }
+}
