@@ -2,93 +2,47 @@
   "name": "WF-04 Script Review & Approval",
   "nodes": [
     {
-      "parameters": {},
-      "id": "1",
-      "name": "Manual Trigger",
-      "type": "n8n-nodes-base.manualTrigger",
-      "typeVersion": 1,
-      "position": [
-        0,
-        0
-      ]
-    },
-    {
       "parameters": {
-        "keepOnlySet": true,
-        "values": {
-          "string": [
-            {
-              "name": "contract_json",
-              "value": "{\n  \"run_id\": \"run_20250201_0001\",\n  \"mode\": \"staging\",\n  \"scene_assets\": [],\n  \"voiceover_url_signed\": null,\n  \"render_id\": null,\n  \"youtube_video_id\": null,\n  \"manifest\": {\n    \"manifest_version\": \"2.0\",\n    \"topic\": {\n      \"title\": \"Su dövranı necə işləyir\",\n      \"category\": \"education\",\n      \"language\": \"az\",\n      \"keywords\": [\"su\", \"dövran\", \"təbiət\"],\n      \"summary\": \"Su dövranının əsas mərhələləri haqqında qısa izah\",\n      \"source_references\": [\n        {\"title\": \"Water Cycle Basics\", \"url\": \"https://example.org/water-cycle\", \"license\": \"CC-BY-4.0\"}\n      ]\n    },\n    \"script\": {\n      \"draft\": \"Ssenari layihəsi: Su dövranı haqqında 90 saniyəlik qısa ssenari.\",\n      \"approved\": \"\",\n      \"review_notes\": [],\n      \"last_reviewed_at\": null\n    },\n    \"assets\": {\n      \"scene_plan\": [],\n      \"items\": [],\n      \"voiceover\": {\n        \"provider\": \"\",\n        \"voice_id\": \"\",\n        \"speed\": 1.0,\n        \"pitch\": 0.0,\n        \"output_format\": \"mp3\",\n        \"voiceover_url_signed\": null\n      }\n    },\n    \"render\": {\n      \"resolution\": \"1920x1080\",\n      \"fps\": 30,\n      \"codec\": \"h264\",\n      \"bitrate_kbps\": 8000,\n      \"render_id\": null,\n      \"render_status\": \"not_started\"\n    },\n    \"publish\": {\n      \"channel_id\": \"\",\n      \"title\": \"\",\n      \"description\": \"\",\n      \"tags\": [],\n      \"privacy\": \"unlisted\",\n      \"scheduled_at\": null,\n      \"youtube_video_id\": null,\n      \"publish_status\": \"not_published\"\n    },\n    \"analytics\": {\n      \"enabled\": true,\n      \"tracking_tags\": [],\n      \"first_publish_at\": null,\n      \"last_metrics_pull_at\": null,\n      \"metrics\": {}\n    },\n    \"audit\": {\n      \"created_by\": \"wf-01\",\n      \"updated_by\": \"wf-03\",\n      \"change_log\": [\n        {\n          \"at\": \"2025-02-01T09:00:00Z\",\n          \"by\": \"wf-01\",\n          \"change\": \"run created\"\n        },\n        {\n          \"at\": \"2025-02-01T09:30:00Z\",\n          \"by\": \"wf-02\",\n          \"change\": \"sources added\"\n        },\n        {\n          \"at\": \"2025-02-01T10:00:00Z\",\n          \"by\": \"wf-03\",\n          \"change\": \"script drafted\"\n        }\n      ]\n    },\n    \"timestamps\": {\n      \"created_at\": \"2025-02-01T09:00:00Z\",\n      \"updated_at\": \"2025-02-01T10:00:00Z\",\n      \"phase\": \"script_draft\"\n    }\n  }\n}"
-            },
-            {
-              "name": "review_notes",
-              "value": "Terminləri sadələşdir və 2 cümləlik giriş əlavə et."
-            },
-            {
-              "name": "approved_script",
-              "value": "Ssenari təsdiqləndi: Su dövranı haqqında qısa və aydın izah."
-            },
-            {
-              "name": "environment",
-              "value": "staging"
-            }
-          ]
+        "httpMethod": "POST",
+        "path": "wf-04",
+        "responseMode": "lastNode",
+        "options": {
+          "responseData": "firstEntryJson"
         }
       },
-      "id": "2",
-      "name": "Set Sample Input",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 2,
-      "position": [
-        220,
-        0
-      ]
+      "id": "1",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "webhookId": "wf-04-trigger"
     },
     {
       "parameters": {
         "language": "javascript",
-        "code": "const now = new Date().toISOString();\nconst input = $json;\n\ntry {\n  const contract = input.contract_json ? JSON.parse(input.contract_json) : input;\n  const resolvedConfig = contract.resolved_config || {\n    environment: input.environment || 'staging',\n    publish: {\n      publish_enabled: false,\n      privacy_default: 'unlisted',\n      channel_id: '',\n      credentials: { type: 'credential_ref', ref: 'cred_youtube_api' }\n    },\n    storage: {\n      base_url: 'https://storage.example.com',\n      signing_key: { type: 'credential_ref', ref: 'cred_storage_signing' },\n      asset_bucket: 'ytb-assets'\n    },\n    tts: {\n      provider: 'acme-tts',\n      api_key: { type: 'credential_ref', ref: 'cred_tts_api' },\n      default_voice_id: 'az-01'\n    },\n    render: {\n      endpoint: 'https://render.example.com',\n      api_key: { type: 'credential_ref', ref: 'cred_render_api' },\n      timeout_sec: 1800\n    },\n    branding: {\n      default_tags: ['elm', 'maarif', 'azərbaycanca'],\n      channel_name: 'Helal Elm'\n    },\n    runtime: {\n      dry_run: contract.mode === 'dry_run',\n      publish_off: true\n    }\n  };\n\n  if (!contract.manifest || !contract.manifest.script) {\n    throw new Error('invalid_manifest');\n  }\n\n  const reviewNotes = input.review_notes || '';\n  const approvedScript = input.approved_script || '';\n\n  if (!reviewNotes.trim()) {\n    throw new Error('review_notes_required');\n  }\n\n  if (!approvedScript.trim()) {\n    throw new Error('approval_required');\n  }\n\n  contract.manifest.audit.change_log.push({\n    at: now,\n    by: 'wf-04',\n    change: `step=wf-04 status=STARTED run_id=${contract.run_id} mode=${contract.mode}`\n  });\n\n  contract.manifest.script.approved = approvedScript;\n  contract.manifest.script.review_notes = [reviewNotes];\n  contract.manifest.script.last_reviewed_at = now;\n  contract.manifest.timestamps.phase = 'script_approved';\n  contract.manifest.timestamps.updated_at = now;\n\n  contract.manifest.audit.change_log.push({\n    at: now,\n    by: 'wf-04',\n    change: `step=wf-04 status=COMPLETED run_id=${contract.run_id} mode=${contract.mode} notes=1`\n  });\n\n  return [\n    {\n      json: {\n        run_id: contract.run_id,\n        mode: contract.mode,\n        scene_assets: contract.scene_assets,\n        voiceover_url_signed: contract.voiceover_url_signed,\n        render_id: contract.render_id,\n        youtube_video_id: contract.youtube_video_id,\n        manifest: contract.manifest,\n        resolved_config: resolvedConfig,\n        worker: 'WF-04',\n        status: 'COMPLETED',\n        output_summary: 'updated script.approved and review_notes'\n      }\n    }\n  ];\n} catch (error) {\n  const message = error && error.message ? error.message : 'unknown_error';\n  const fallback = input.contract_json ? JSON.parse(input.contract_json) : input;\n  if (fallback.manifest && fallback.manifest.timestamps) {\n    fallback.manifest.timestamps.phase = 'failed_wf_04';\n    fallback.manifest.timestamps.updated_at = now;\n    fallback.manifest.audit.change_log.push({\n      at: now,\n      by: 'wf-04',\n      change: `step=wf-04 status=FAILED error_code=FAILED_WF_04 error_message=${message} run_id=${fallback.run_id} mode=${fallback.mode}`\n    });\n  }\n  return [\n    {\n      json: {\n        run_id: fallback.run_id || null,\n        mode: fallback.mode || null,\n        scene_assets: fallback.scene_assets || [],\n        voiceover_url_signed: fallback.voiceover_url_signed || null,\n        render_id: fallback.render_id || null,\n        youtube_video_id: fallback.youtube_video_id || null,\n        manifest: fallback.manifest || null,\n        resolved_config: fallback.resolved_config || null,\n        worker: 'WF-04',\n        status: 'FAILED_WF_04',\n        output_summary: `error=${message}`\n      }\n    }\n  ];\n}"
+        "code": "const now = new Date().toISOString();\nconst input = $json;\n\ntry {\n  const contract = input;\n  const resolvedConfig = contract.resolved_config || {};\n\n  if (!contract.manifest || !contract.manifest.script) {\n    throw new Error('invalid_manifest');\n  }\n\n  contract.manifest.audit.change_log.push({\n    at: now,\n    by: 'wf-04',\n    change: `step=wf-04 status=STARTED run_id=${contract.run_id} mode=${contract.mode}`\n  });\n\n  // Get the draft script\n  const draftScript = contract.manifest.script.draft || '';\n  \n  if (!draftScript || draftScript.length < 100) {\n    throw new Error('no_draft_script');\n  }\n\n  // In auto-approval mode (for automation), approve the draft as-is\n  // In manual mode, review_notes and approved_script would come from input\n  const reviewNotes = input.review_notes || 'Auto-approved by WF-04';\n  const approvedScript = input.approved_script || draftScript;\n\n  // Update manifest\n  contract.manifest.script.approved = approvedScript;\n  contract.manifest.script.review_notes = Array.isArray(contract.manifest.script.review_notes) \n    ? [...contract.manifest.script.review_notes, reviewNotes]\n    : [reviewNotes];\n  contract.manifest.script.last_reviewed_at = now;\n  contract.manifest.timestamps.phase = 'script_approved';\n  contract.manifest.timestamps.updated_at = now;\n  contract.manifest.audit.updated_by = 'wf-04';\n\n  // Generate YouTube metadata from script\n  const topic = contract.manifest.topic || {};\n  const channelName = resolvedConfig.branding?.channel_name || 'Helal Elm';\n  const defaultTags = resolvedConfig.branding?.default_tags || ['elm', 'maarif', 'azərbaycanca'];\n  \n  contract.manifest.publish.title = topic.title || 'Video';\n  contract.manifest.publish.description = `${topic.summary || ''}\\n\\n${channelName} kanalından maarifləndirici video.\\n\\n#${topic.keywords?.join(' #') || 'elm'}`;\n  contract.manifest.publish.tags = [...defaultTags, ...(topic.keywords || [])];\n  contract.manifest.publish.channel_id = contract.channel_id || resolvedConfig.publish?.channel_id || '';\n\n  contract.manifest.audit.change_log.push({\n    at: now,\n    by: 'wf-04',\n    change: `step=wf-04 status=COMPLETED run_id=${contract.run_id} mode=${contract.mode} notes=1`\n  });\n\n  return [\n    {\n      json: {\n        run_id: contract.run_id,\n        mode: contract.mode,\n        scene_assets: contract.scene_assets || [],\n        voiceover_url_signed: contract.voiceover_url_signed,\n        render_id: contract.render_id,\n        youtube_video_id: contract.youtube_video_id,\n        manifest: contract.manifest,\n        resolved_config: resolvedConfig,\n        environment: contract.environment,\n        scope: contract.scope,\n        channel_id: contract.channel_id,\n        runtime_overrides: contract.runtime_overrides,\n        worker: 'WF-04',\n        status: 'COMPLETED',\n        output_summary: 'script approved and youtube metadata generated'\n      }\n    }\n  ];\n} catch (error) {\n  const message = error && error.message ? error.message : 'unknown_error';\n  const fallback = input;\n  \n  if (fallback.manifest && fallback.manifest.timestamps) {\n    fallback.manifest.timestamps.phase = 'failed_wf_04';\n    fallback.manifest.timestamps.updated_at = now;\n    fallback.manifest.audit.change_log.push({\n      at: now,\n      by: 'wf-04',\n      change: `step=wf-04 status=FAILED error_code=FAILED_WF_04 error_message=${message} run_id=${fallback.run_id} mode=${fallback.mode}`\n    });\n  }\n  \n  return [\n    {\n      json: {\n        run_id: fallback.run_id || null,\n        mode: fallback.mode || null,\n        scene_assets: fallback.scene_assets || [],\n        voiceover_url_signed: fallback.voiceover_url_signed || null,\n        render_id: fallback.render_id || null,\n        youtube_video_id: fallback.youtube_video_id || null,\n        manifest: fallback.manifest || null,\n        resolved_config: fallback.resolved_config || null,\n        worker: 'WF-04',\n        status: 'FAILED_WF_04',\n        output_summary: `error=${message}`\n      }\n    }\n  ];\n}"
       },
-      "id": "3",
+      "id": "2",
       "name": "Approve Script",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        520,
-        0
-      ]
+      "position": [260, 0]
     }
   ],
   "connections": {
-    "Manual Trigger": {
+    "Webhook Trigger": {
       "main": [
-        [
-          {
-            "node": "Set Sample Input",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Set Sample Input": {
-      "main": [
-        [
-          {
-            "node": "Approve Script",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{"node": "Approve Script", "type": "main", "index": 0}]
       ]
     }
   },
   "active": false,
-  "settings": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
   "versionId": "00000000-0000-0000-0000-000000000004",
   "meta": {
-    "templateCredsSetupCompleted": false
+    "templateCredsSetupCompleted": true
   },
   "id": "4"
 }
