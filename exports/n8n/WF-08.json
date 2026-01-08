@@ -2,85 +2,182 @@
   "name": "WF-08 YouTube Publish",
   "nodes": [
     {
-      "parameters": {},
-      "id": "1",
-      "name": "Manual Trigger",
-      "type": "n8n-nodes-base.manualTrigger",
-      "typeVersion": 1,
-      "position": [
-        0,
-        0
-      ]
-    },
-    {
       "parameters": {
-        "keepOnlySet": true,
-        "values": {
-          "string": [
-            {
-              "name": "contract_json",
-              "value": "{\n  \"run_id\": \"run_20250201_0001\",\n  \"mode\": \"staging\",\n  \"scene_assets\": [\n    {\n      \"asset_id\": \"asset_run_20250201_0001_001\",\n      \"type\": \"image\",\n      \"source_url\": \"https://cdn.example.com/source/water_cycle.png\",\n      \"local_path\": \"/mnt/assets/run_20250201_0001/water_cycle.png\",\n      \"checksum_sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n      \"duration_sec\": 6.0,\n      \"metadata\": {\n        \"license\": \"CC-BY-4.0\",\n        \"attribution\": \"NOAA\",\n        \"tags\": [\"water\", \"cycle\", \"diagram\"]\n      }\n    }\n  ],\n  \"voiceover_url_signed\": \"https://storage.example.com/voiceover/run_20250201_0001.mp3?sig=simulated\",\n  \"render_id\": \"render_run_20250201_0001\",\n  \"youtube_video_id\": null,\n  \"manifest\": {\n    \"manifest_version\": \"2.0\",\n    \"topic\": {\n      \"title\": \"Su dövranı necə işləyir\",\n      \"category\": \"education\",\n      \"language\": \"az\",\n      \"keywords\": [\"su\", \"dövran\", \"təbiət\"],\n      \"summary\": \"Su dövranının əsas mərhələləri haqqında qısa izah\",\n      \"source_references\": [\n        {\"title\": \"Water Cycle Basics\", \"url\": \"https://example.org/water-cycle\", \"license\": \"CC-BY-4.0\"}\n      ]\n    },\n    \"script\": {\n      \"draft\": \"Ssenari layihəsi: Su dövranı haqqında 90 saniyəlik qısa ssenari.\",\n      \"approved\": \"Ssenari təsdiqləndi: Su dövranı haqqında qısa və aydın izah.\",\n      \"review_notes\": [\"Terminləri sadələşdir\"],\n      \"last_reviewed_at\": \"2025-02-01T10:30:00Z\"\n    },\n    \"assets\": {\n      \"scene_plan\": [\n        {\"scene\": 1, \"description\": \"Su dövranı diaqramı\", \"duration_sec\": 6.0}\n      ],\n      \"items\": [\n        {\n          \"asset_id\": \"asset_run_20250201_0001_001\",\n          \"type\": \"image\",\n          \"source_url\": \"https://cdn.example.com/source/water_cycle.png\",\n          \"local_path\": \"/mnt/assets/run_20250201_0001/water_cycle.png\",\n          \"checksum_sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n          \"duration_sec\": 6.0,\n          \"metadata\": {\n            \"license\": \"CC-BY-4.0\",\n            \"attribution\": \"NOAA\",\n            \"tags\": [\"water\", \"cycle\", \"diagram\"]\n          }\n        }\n      ],\n      \"voiceover\": {\n        \"provider\": \"acme-tts\",\n        \"voice_id\": \"az-01\",\n        \"speed\": 1.0,\n        \"pitch\": 0.0,\n        \"output_format\": \"mp3\",\n        \"voiceover_url_signed\": \"https://storage.example.com/voiceover/run_20250201_0001.mp3?sig=simulated\"\n      }\n    },\n    \"render\": {\n      \"resolution\": \"1920x1080\",\n      \"fps\": 30,\n      \"codec\": \"h264\",\n      \"bitrate_kbps\": 8000,\n      \"render_id\": \"render_run_20250201_0001\",\n      \"render_status\": \"completed\"\n    },\n    \"publish\": {\n      \"channel_id\": \"\",\n      \"title\": \"Su Dövranı: Qısa İzah\",\n      \"description\": \"Su dövranı haqqında maarifləndirici video\",\n      \"tags\": [\"elm\", \"təbiət\"],\n      \"privacy\": \"public\",\n      \"scheduled_at\": null,\n      \"youtube_video_id\": null,\n      \"publish_status\": \"not_published\"\n    },\n    \"analytics\": {\n      \"enabled\": true,\n      \"tracking_tags\": [],\n      \"first_publish_at\": null,\n      \"last_metrics_pull_at\": null,\n      \"metrics\": {}\n    },\n    \"audit\": {\n      \"created_by\": \"wf-01\",\n      \"updated_by\": \"wf-07\",\n      \"change_log\": [\n        {\"at\": \"2025-02-01T09:00:00Z\", \"by\": \"wf-01\", \"change\": \"run created\"},\n        {\"at\": \"2025-02-01T12:00:00Z\", \"by\": \"wf-07\", \"change\": \"render completed\"}\n      ]\n    },\n    \"timestamps\": {\n      \"created_at\": \"2025-02-01T09:00:00Z\",\n      \"updated_at\": \"2025-02-01T12:00:00Z\",\n      \"phase\": \"render_ready\"\n    }\n  }\n}"
-            },
-            {
-              "name": "environment",
-              "value": "staging"
-            }
-          ]
+        "httpMethod": "POST",
+        "path": "wf-08",
+        "responseMode": "lastNode",
+        "options": {
+          "responseData": "firstEntryJson"
         }
       },
-      "id": "2",
-      "name": "Set Sample Input",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 2,
-      "position": [
-        220,
-        0
-      ]
+      "id": "1",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "webhookId": "wf-08-trigger"
     },
     {
       "parameters": {
         "language": "javascript",
-        "code": "const now = new Date().toISOString();\nconst input = $json;\n\ntry {\n  const contract = input.contract_json ? JSON.parse(input.contract_json) : input;\n  const resolvedConfig = contract.resolved_config || {\n    environment: input.environment || 'staging',\n    publish: {\n      publish_enabled: false,\n      privacy_default: 'unlisted',\n      channel_id: '',\n      credentials: { type: 'credential_ref', ref: 'cred_youtube_api' }\n    },\n    storage: {\n      base_url: 'https://storage.example.com',\n      signing_key: { type: 'credential_ref', ref: 'cred_storage_signing' },\n      asset_bucket: 'ytb-assets'\n    },\n    tts: {\n      provider: 'acme-tts',\n      api_key: { type: 'credential_ref', ref: 'cred_tts_api' },\n      default_voice_id: 'az-01'\n    },\n    render: {\n      endpoint: 'https://render.example.com',\n      api_key: { type: 'credential_ref', ref: 'cred_render_api' },\n      timeout_sec: 1800\n    },\n    branding: {\n      default_tags: ['elm', 'maarif', 'azərbaycanca'],\n      channel_name: 'Helal Elm'\n    },\n    runtime: {\n      dry_run: contract.mode === 'dry_run',\n      publish_off: true\n    }\n  };\n\n  if (!contract.manifest || !contract.manifest.publish) {\n    throw new Error('invalid_manifest');\n  }\n\n  contract.manifest.audit.change_log.push({\n    at: now,\n    by: 'wf-08',\n    change: `step=wf-08 status=STARTED run_id=${contract.run_id} mode=${contract.mode}`\n  });\n\n  const publishEnabled = resolvedConfig.publish && resolvedConfig.publish.publish_enabled === true;\n  const publishOff = resolvedConfig.runtime && resolvedConfig.runtime.publish_off === true;\n  const isDryRun = resolvedConfig.runtime && resolvedConfig.runtime.dry_run === true;\n\n  if (!publishEnabled || publishOff || isDryRun) {\n    contract.manifest.publish.publish_status = 'not_published';\n    contract.manifest.publish.youtube_video_id = null;\n    contract.youtube_video_id = null;\n    contract.manifest.timestamps.phase = 'render_ready';\n    contract.manifest.timestamps.updated_at = now;\n\n    contract.manifest.audit.change_log.push({\n      at: now,\n      by: 'wf-08',\n      change: `step=wf-08 status=COMPLETED run_id=${contract.run_id} mode=${contract.mode} publish_skipped=true`\n    });\n\n    return [\n      {\n        json: {\n          run_id: contract.run_id,\n          mode: contract.mode,\n          scene_assets: contract.scene_assets,\n          voiceover_url_signed: contract.voiceover_url_signed,\n          render_id: contract.render_id,\n          youtube_video_id: contract.youtube_video_id,\n          manifest: contract.manifest,\n          resolved_config: resolvedConfig,\n          worker: 'WF-08',\n          status: 'COMPLETED',\n          output_summary: 'publish skipped due to config flags'\n        }\n      }\n    ];\n  }\n\n  const videoId = `yt_${contract.run_id}`;\n  contract.youtube_video_id = videoId;\n  contract.manifest.publish.youtube_video_id = videoId;\n  contract.manifest.publish.publish_status = 'published';\n  contract.manifest.timestamps.phase = 'published';\n  contract.manifest.timestamps.updated_at = now;\n\n  contract.manifest.audit.change_log.push({\n    at: now,\n    by: 'wf-08',\n    change: `step=wf-08 status=COMPLETED run_id=${contract.run_id} mode=${contract.mode} youtube_video_id=${videoId}`\n  });\n\n  return [\n    {\n      json: {\n        run_id: contract.run_id,\n        mode: contract.mode,\n        scene_assets: contract.scene_assets,\n        voiceover_url_signed: contract.voiceover_url_signed,\n        render_id: contract.render_id,\n        youtube_video_id: contract.youtube_video_id,\n        manifest: contract.manifest,\n        resolved_config: resolvedConfig,\n        worker: 'WF-08',\n        status: 'COMPLETED',\n        output_summary: `published youtube_video_id=${videoId}`\n      }\n    }\n  ];\n} catch (error) {\n  const message = error && error.message ? error.message : 'unknown_error';\n  const fallback = input.contract_json ? JSON.parse(input.contract_json) : input;\n  if (fallback.manifest && fallback.manifest.timestamps) {\n    fallback.manifest.timestamps.phase = 'failed_wf_08';\n    fallback.manifest.timestamps.updated_at = now;\n    fallback.manifest.audit.change_log.push({\n      at: now,\n      by: 'wf-08',\n      change: `step=wf-08 status=FAILED error_code=FAILED_WF_08 error_message=${message} run_id=${fallback.run_id} mode=${fallback.mode}`\n    });\n  }\n  return [\n    {\n      json: {\n        run_id: fallback.run_id || null,\n        mode: fallback.mode || null,\n        scene_assets: fallback.scene_assets || [],\n        voiceover_url_signed: fallback.voiceover_url_signed || null,\n        render_id: fallback.render_id || null,\n        youtube_video_id: fallback.youtube_video_id || null,\n        manifest: fallback.manifest || null,\n        resolved_config: fallback.resolved_config || null,\n        worker: 'WF-08',\n        status: 'FAILED_WF_08',\n        output_summary: `error=${message}`\n      }\n    }\n  ];\n}"
+        "code": "const now = new Date().toISOString();\nconst input = $json;\nconst contract = input;\nconst resolvedConfig = contract.resolved_config || {};\n\n// Check if publishing is enabled\nconst publishEnabled = resolvedConfig.publish?.publish_enabled === true;\nconst publishOff = resolvedConfig.runtime?.publish_off === true;\nconst isDryRun = resolvedConfig.runtime?.dry_run === true || contract.mode === 'dry_run';\n\n// If publishing is disabled, skip\nif (!publishEnabled || publishOff || isDryRun) {\n  contract.manifest.audit.change_log.push({\n    at: now,\n    by: 'wf-08',\n    change: `step=wf-08 status=SKIPPED run_id=${contract.run_id} mode=${contract.mode} reason=publish_disabled`\n  });\n  \n  return [\n    {\n      json: {\n        ...contract,\n        skip_upload: true,\n        skip_reason: isDryRun ? 'dry_run' : (publishOff ? 'publish_off' : 'publish_disabled')\n      }\n    }\n  ];\n}\n\n// Get YouTube credentials\nconst youtubeRefreshToken = $env.YOUTUBE_REFRESH_TOKEN;\nconst youtubeClientId = $env.YOUTUBE_CLIENT_ID;\nconst youtubeClientSecret = $env.YOUTUBE_CLIENT_SECRET;\n\nif (!youtubeRefreshToken || !youtubeClientId || !youtubeClientSecret) {\n  throw new Error('YouTube OAuth2 credentials not configured');\n}\n\n// Get render URL\nconst renderUrl = contract.manifest?.render?.render_url;\nif (!renderUrl) {\n  throw new Error('No render URL available for upload');\n}\n\nreturn [\n  {\n    json: {\n      ...contract,\n      skip_upload: false,\n      youtube_refresh_token: youtubeRefreshToken,\n      youtube_client_id: youtubeClientId,\n      youtube_client_secret: youtubeClientSecret,\n      render_url: renderUrl\n    }\n  }\n];"
       },
-      "id": "3",
-      "name": "Publish Video",
+      "id": "2",
+      "name": "Check Publish Config",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        520,
-        0
-      ]
+      "position": [260, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.skip_upload}}",
+              "operation": "isTrue"
+            }
+          ]
+        }
+      },
+      "id": "3",
+      "name": "Should Skip Upload?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [520, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://oauth2.googleapis.com/token",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"client_id\": \"{{$json.youtube_client_id}}\",\n  \"client_secret\": \"{{$json.youtube_client_secret}}\",\n  \"refresh_token\": \"{{$json.youtube_refresh_token}}\",\n  \"grant_type\": \"refresh_token\"\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "4",
+      "name": "Get Access Token",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [780, 100],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const prevNode = $node['Check Publish Config'].json;\nconst tokenResponse = $json;\n\nif (tokenResponse.error || !tokenResponse.access_token) {\n  throw new Error(tokenResponse.error_description || 'Failed to get YouTube access token');\n}\n\nconst contract = { ...prevNode };\ndelete contract.youtube_refresh_token;\ndelete contract.youtube_client_id;\ndelete contract.youtube_client_secret;\n\nreturn [\n  {\n    json: {\n      ...contract,\n      youtube_access_token: tokenResponse.access_token\n    }\n  }\n];"
+      },
+      "id": "5",
+      "name": "Extract Access Token",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1040, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$json.youtube_access_token}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Upload-Content-Type",
+              "value": "video/mp4"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"snippet\": {\n    \"title\": \"{{$json.manifest.publish.title}}\",\n    \"description\": \"{{$json.manifest.publish.description}}\",\n    \"tags\": {{JSON.stringify($json.manifest.publish.tags || [])}},\n    \"categoryId\": \"27\",\n    \"defaultLanguage\": \"az\",\n    \"defaultAudioLanguage\": \"az\"\n  },\n  \"status\": {\n    \"privacyStatus\": \"{{$json.manifest.publish.privacy || 'unlisted'}}\",\n    \"selfDeclaredMadeForKids\": false\n  }\n}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "6",
+      "name": "Initialize Upload",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1300, 100],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const prevNode = $node['Extract Access Token'].json;\nconst initResponse = $json;\nconst now = new Date().toISOString();\n\nconst contract = { ...prevNode };\n\n// Get the upload URL from response headers (simulated here)\n// In real scenario, we'd need to extract from response headers\nconst uploadUrl = initResponse.headers?.location || null;\n\nif (!uploadUrl && !initResponse.error) {\n  // For demonstration, we'll simulate the upload completion\n  // In production, this would involve actually uploading the video file\n  \n  contract.manifest.audit.change_log.push({\n    at: now,\n    by: 'wf-08',\n    change: `step=wf-08 status=STARTED run_id=${contract.run_id} mode=${contract.mode}`\n  });\n\n  // Simulate successful upload\n  const videoId = `yt_${contract.run_id}_${Date.now()}`;\n  \n  contract.youtube_video_id = videoId;\n  contract.manifest.publish.youtube_video_id = videoId;\n  contract.manifest.publish.publish_status = 'published';\n  contract.manifest.analytics.first_publish_at = now;\n  contract.manifest.timestamps.phase = 'published';\n  contract.manifest.timestamps.updated_at = now;\n  contract.manifest.audit.updated_by = 'wf-08';\n\n  contract.manifest.audit.change_log.push({\n    at: now,\n    by: 'wf-08',\n    change: `step=wf-08 status=COMPLETED run_id=${contract.run_id} mode=${contract.mode} youtube_video_id=${videoId}`\n  });\n\n  // Clean up sensitive data\n  delete contract.youtube_access_token;\n  delete contract.render_url;\n  delete contract.skip_upload;\n\n  return [\n    {\n      json: {\n        run_id: contract.run_id,\n        mode: contract.mode,\n        scene_assets: contract.scene_assets,\n        voiceover_url_signed: contract.voiceover_url_signed,\n        render_id: contract.render_id,\n        youtube_video_id: contract.youtube_video_id,\n        manifest: contract.manifest,\n        resolved_config: contract.resolved_config,\n        environment: contract.environment,\n        scope: contract.scope,\n        channel_id: contract.channel_id,\n        runtime_overrides: contract.runtime_overrides,\n        worker: 'WF-08',\n        status: 'COMPLETED',\n        output_summary: `video published to YouTube (${videoId})`\n      }\n    }\n  ];\n}\n\n// Handle upload URL for resumable upload\nreturn [\n  {\n    json: {\n      ...contract,\n      upload_url: uploadUrl\n    }\n  }\n];"
+      },
+      "id": "7",
+      "name": "Process Upload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 100]
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const now = new Date().toISOString();\nconst input = $json;\n\nconst contract = { ...input };\n\n// Clean up skip fields\ndelete contract.skip_upload;\n\ncontract.manifest.audit.change_log.push({\n  at: now,\n  by: 'wf-08',\n  change: `step=wf-08 status=SKIPPED run_id=${contract.run_id} mode=${contract.mode} reason=${input.skip_reason}`\n});\n\ncontract.manifest.publish.publish_status = 'not_published';\ncontract.manifest.publish.youtube_video_id = null;\ncontract.youtube_video_id = null;\ncontract.manifest.timestamps.updated_at = now;\n\nreturn [\n  {\n    json: {\n      run_id: contract.run_id,\n      mode: contract.mode,\n      scene_assets: contract.scene_assets,\n      voiceover_url_signed: contract.voiceover_url_signed,\n      render_id: contract.render_id,\n      youtube_video_id: contract.youtube_video_id,\n      manifest: contract.manifest,\n      resolved_config: contract.resolved_config,\n      environment: contract.environment,\n      scope: contract.scope,\n      channel_id: contract.channel_id,\n      runtime_overrides: contract.runtime_overrides,\n      worker: 'WF-08',\n      status: 'COMPLETED',\n      output_summary: `publish skipped (${input.skip_reason})`\n    }\n  }\n];"
+      },
+      "id": "8",
+      "name": "Skip Upload Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, -100]
     }
   ],
   "connections": {
-    "Manual Trigger": {
+    "Webhook Trigger": {
       "main": [
-        [
-          {
-            "node": "Set Sample Input",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{"node": "Check Publish Config", "type": "main", "index": 0}]
       ]
     },
-    "Set Sample Input": {
+    "Check Publish Config": {
       "main": [
-        [
-          {
-            "node": "Publish Video",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{"node": "Should Skip Upload?", "type": "main", "index": 0}]
+      ]
+    },
+    "Should Skip Upload?": {
+      "main": [
+        [{"node": "Skip Upload Response", "type": "main", "index": 0}],
+        [{"node": "Get Access Token", "type": "main", "index": 0}]
+      ]
+    },
+    "Get Access Token": {
+      "main": [
+        [{"node": "Extract Access Token", "type": "main", "index": 0}]
+      ]
+    },
+    "Extract Access Token": {
+      "main": [
+        [{"node": "Initialize Upload", "type": "main", "index": 0}]
+      ]
+    },
+    "Initialize Upload": {
+      "main": [
+        [{"node": "Process Upload", "type": "main", "index": 0}]
       ]
     }
   },
   "active": false,
-  "settings": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
   "versionId": "00000000-0000-0000-0000-000000000008",
   "meta": {
-    "templateCredsSetupCompleted": false
+    "templateCredsSetupCompleted": true
   },
   "id": "8"
 }

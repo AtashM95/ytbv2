@@ -4,7 +4,7 @@
     {
       "parameters": {
         "formTitle": "WF-09 Settings Panel",
-        "formDescription": "Config DB/Data Table \u00fc\u00e7\u00fcn settings update",
+        "formDescription": "Config DB/Data Table üçün settings update",
         "formFields": {
           "values": [
             {
@@ -13,18 +13,9 @@
               "required": true,
               "fieldOptions": {
                 "values": [
-                  {
-                    "name": "dry_run",
-                    "value": "dry_run"
-                  },
-                  {
-                    "name": "staging",
-                    "value": "staging"
-                  },
-                  {
-                    "name": "production",
-                    "value": "production"
-                  }
+                  {"name": "dry_run", "value": "dry_run"},
+                  {"name": "staging", "value": "staging"},
+                  {"name": "production", "value": "production"}
                 ]
               }
             },
@@ -39,26 +30,11 @@
               "required": true,
               "fieldOptions": {
                 "values": [
-                  {
-                    "name": "string",
-                    "value": "string"
-                  },
-                  {
-                    "name": "number",
-                    "value": "number"
-                  },
-                  {
-                    "name": "boolean",
-                    "value": "boolean"
-                  },
-                  {
-                    "name": "json",
-                    "value": "json"
-                  },
-                  {
-                    "name": "credential_ref",
-                    "value": "credential_ref"
-                  }
+                  {"name": "string", "value": "string"},
+                  {"name": "number", "value": "number"},
+                  {"name": "boolean", "value": "boolean"},
+                  {"name": "json", "value": "json"},
+                  {"name": "credential_ref", "value": "credential_ref"}
                 ]
               }
             },
@@ -78,22 +54,10 @@
               "required": true,
               "fieldOptions": {
                 "values": [
-                  {
-                    "name": "global",
-                    "value": "global"
-                  },
-                  {
-                    "name": "channel",
-                    "value": "channel"
-                  },
-                  {
-                    "name": "workflow",
-                    "value": "workflow"
-                  },
-                  {
-                    "name": "run",
-                    "value": "run"
-                  }
+                  {"name": "global", "value": "global"},
+                  {"name": "channel", "value": "channel"},
+                  {"name": "workflow", "value": "workflow"},
+                  {"name": "run", "value": "run"}
                 ]
               }
             },
@@ -121,41 +85,6 @@
               "fieldLabel": "Updated By",
               "fieldType": "text",
               "required": false
-            },
-            {
-              "fieldLabel": "Run ID",
-              "fieldType": "text",
-              "required": false
-            },
-            {
-              "fieldLabel": "mode",
-              "fieldType": "text",
-              "required": false
-            },
-            {
-              "fieldLabel": "scene_assets",
-              "fieldType": "textarea",
-              "required": false
-            },
-            {
-              "fieldLabel": "voiceover_url_signed",
-              "fieldType": "text",
-              "required": false
-            },
-            {
-              "fieldLabel": "render_id",
-              "fieldType": "text",
-              "required": false
-            },
-            {
-              "fieldLabel": "youtube_video_id",
-              "fieldType": "text",
-              "required": false
-            },
-            {
-              "fieldLabel": "manifest",
-              "fieldType": "textarea",
-              "required": false
             }
           ]
         }
@@ -164,45 +93,36 @@
       "name": "Form Trigger",
       "type": "n8n-nodes-base.formTrigger",
       "typeVersion": 1,
-      "position": [
-        0,
-        0
-      ]
+      "position": [0, 0]
     },
     {
       "parameters": {
         "language": "javascript",
-        "code": "const input = $json;\nconst now = new Date().toISOString();\nconst valueType = input.value_type;\nlet value = input.value;\n\nif (valueType === 'number') {\n  const parsed = Number(value);\n  if (Number.isNaN(parsed)) {\n    throw new Error('invalid_value_type');\n  }\n  value = parsed;\n}\n\nif (valueType === 'boolean') {\n  if (typeof value === 'boolean') {\n    value = value;\n  } else if (typeof value === 'string') {\n    const lowered = value.toLowerCase();\n    if (lowered === 'true') value = true;\n    if (lowered === 'false') value = false;\n    if (lowered !== 'true' && lowered !== 'false') {\n      throw new Error('invalid_value_type');\n    }\n  } else {\n    throw new Error('invalid_value_type');\n  }\n}\n\nif (valueType === 'json') {\n  if (typeof value === 'string') {\n    value = JSON.parse(value);\n  }\n}\n\nif (valueType === 'credential_ref') {\n  if (!input.credential_ref) {\n    throw new Error('credential_ref_required');\n  }\n  value = null;\n} else {\n  input.credential_ref = null;\n}\n\nconst isActive = input.is_active === true || input.is_active === 'true';\nconst dryRun = input.dry_run === true || input.dry_run === 'true';\n\nreturn [\n  {\n    json: {\n      ...input,\n      value,\n      is_active: isActive,\n      dry_run: dryRun,\n      now\n    }\n  }\n];"
+        "code": "const input = $json;\nconst now = new Date().toISOString();\nconst valueType = input['Value Type'] || input.value_type;\nlet value = input['Value'] || input.value;\n\nif (valueType === 'number') {\n  const parsed = Number(value);\n  if (Number.isNaN(parsed)) {\n    throw new Error('invalid_value_type: expected number');\n  }\n  value = parsed;\n}\n\nif (valueType === 'boolean') {\n  if (typeof value === 'boolean') {\n    // already boolean\n  } else if (typeof value === 'string') {\n    const lowered = value.toLowerCase();\n    if (lowered === 'true') value = true;\n    else if (lowered === 'false') value = false;\n    else throw new Error('invalid_value_type: expected boolean');\n  } else {\n    throw new Error('invalid_value_type: expected boolean');\n  }\n}\n\nif (valueType === 'json') {\n  if (typeof value === 'string') {\n    try {\n      value = JSON.parse(value);\n    } catch (e) {\n      throw new Error('invalid_value_type: invalid JSON');\n    }\n  }\n}\n\nconst credentialRef = input['Credential Ref'] || input.credential_ref || null;\nif (valueType === 'credential_ref' && !credentialRef) {\n  throw new Error('credential_ref_required');\n}\n\nconst isActive = input['Is Active'] === true || input['Is Active'] === 'true' || input.is_active === true;\nconst dryRun = input['Dry Run'] === true || input['Dry Run'] === 'true' || input.dry_run === true;\n\nreturn [\n  {\n    json: {\n      environment: input['Environment'] || input.environment,\n      key: input['Config Key'] || input.key,\n      value: valueType === 'credential_ref' ? null : value,\n      value_type: valueType,\n      credential_ref: valueType === 'credential_ref' ? credentialRef : null,\n      scope: input['Scope'] || input.scope,\n      notes: input['Notes'] || input.notes || null,\n      is_active: isActive,\n      change_reason: input['Change Reason'] || input.change_reason,\n      dry_run: dryRun,\n      updated_by: input['Updated By'] || input.updated_by || 'wf-09',\n      now: now\n    }\n  }\n];"
       },
       "id": "2",
       "name": "Normalize Input",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        260,
-        0
-      ]
+      "position": [260, 0]
     },
     {
       "parameters": {
         "language": "javascript",
-        "code": "const crypto = require('crypto');\nconst input = $json;\nconst settingsUpdateId = input.settings_update_id || crypto.randomUUID();\nconst createdAt = input.created_at || input.now;\nconst updatedAt = input.now;\nconst updatedBy = input.updated_by || 'wf-09';\n\nlet serializedValue = null;\nif (input.value === null || input.value === undefined) {\n  serializedValue = null;\n} else if (input.value_type === 'string') {\n  serializedValue = String(input.value);\n} else {\n  serializedValue = JSON.stringify(input.value);\n}\n\nconst dbRecord = {\n  id: settingsUpdateId,\n  key: input.key,\n  value: serializedValue,\n  value_type: input.value_type,\n  credential_ref: input.credential_ref || null,\n  scope: input.scope,\n  environment: input.environment,\n  notes: input.notes || null,\n  is_active: input.is_active,\n  created_at: createdAt,\n  updated_at: updatedAt,\n  updated_by: updatedBy\n};\n\nconst sceneAssets = input.scene_assets ? JSON.parse(input.scene_assets) : [];\nconst manifestPayload = input.manifest ? JSON.parse(input.manifest) : null;\n\nconst responseBase = {\n  run_id: input.run_id || null,\n  mode: input.mode || null,\n  scene_assets: sceneAssets,\n  voiceover_url_signed: input.voiceover_url_signed || null,\n  render_id: input.render_id || null,\n  youtube_video_id: input.youtube_video_id || null,\n  manifest: manifestPayload,\n  settings_update_id: settingsUpdateId,\n  action: 'upsert',\n  scope: input.scope,\n  written_keys: [input.key],\n  dry_run: input.dry_run\n};\n\nreturn [\n  {\n    json: {\n      db_record: dbRecord,\n      response_base: responseBase\n    }\n  }\n];"
+        "code": "const crypto = require('crypto');\nconst input = $json;\nconst settingsUpdateId = crypto.randomUUID();\nconst createdAt = input.now;\nconst updatedAt = input.now;\n\nlet serializedValue = null;\nif (input.value === null || input.value === undefined) {\n  serializedValue = null;\n} else if (input.value_type === 'string') {\n  serializedValue = String(input.value);\n} else {\n  serializedValue = JSON.stringify(input.value);\n}\n\nconst dbRecord = {\n  id: settingsUpdateId,\n  key: input.key,\n  value: serializedValue,\n  value_type: input.value_type,\n  credential_ref: input.credential_ref,\n  scope: input.scope,\n  environment: input.environment,\n  notes: input.notes,\n  is_active: input.is_active,\n  created_at: createdAt,\n  updated_at: updatedAt,\n  updated_by: input.updated_by\n};\n\nconst responseBase = {\n  settings_update_id: settingsUpdateId,\n  action: 'upsert',\n  key: input.key,\n  scope: input.scope,\n  environment: input.environment,\n  dry_run: input.dry_run\n};\n\nreturn [\n  {\n    json: {\n      db_record: dbRecord,\n      response_base: responseBase,\n      dry_run: input.dry_run\n    }\n  }\n];"
       },
       "id": "3",
       "name": "Build Record",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        520,
-        0
-      ]
+      "position": [520, 0]
     },
     {
       "parameters": {
         "conditions": {
           "boolean": [
             {
-              "value1": "={{$json.response_base.dry_run}}",
+              "value1": "={{$json.dry_run}}",
               "operation": "isTrue"
             }
           ]
@@ -212,123 +132,115 @@
       "name": "Is Dry Run?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [
-        780,
-        0
-      ]
+      "position": [780, 0]
     },
     {
       "parameters": {
         "language": "javascript",
-        "code": "const base = $json.response_base;\nreturn [\n  {\n    json: {\n      ...base,\n      dry_run: true\n    }\n  }\n];"
+        "code": "const base = $json.response_base;\nreturn [\n  {\n    json: {\n      ...base,\n      status: 'DRY_RUN_SUCCESS',\n      message: 'Dry run completed - no changes made to database',\n      would_write: $json.db_record\n    }\n  }\n];"
       },
       "id": "5",
       "name": "Dry Run Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        1040,
-        -120
-      ]
+      "position": [1040, -120]
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "INSERT INTO ytb_settings (id, key, value, value_type, credential_ref, scope, environment, notes, is_active, created_at, updated_at, updated_by) VALUES ({{$json.db_record.id}}, {{$json.db_record.key}}, {{$json.db_record.value}}, {{$json.db_record.value_type}}, {{$json.db_record.credential_ref}}, {{$json.db_record.scope}}, {{$json.db_record.environment}}, {{$json.db_record.notes}}, {{$json.db_record.is_active}}, {{$json.db_record.created_at}}, {{$json.db_record.updated_at}}, {{$json.db_record.updated_by}}) ON CONFLICT (key, environment, scope) DO UPDATE SET value = EXCLUDED.value, value_type = EXCLUDED.value_type, credential_ref = EXCLUDED.credential_ref, notes = EXCLUDED.notes, is_active = EXCLUDED.is_active, updated_at = EXCLUDED.updated_at, updated_by = EXCLUDED.updated_by;"
+        "operation": "insert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "ytb_settings"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.db_record.id }}",
+            "key": "={{ $json.db_record.key }}",
+            "value": "={{ $json.db_record.value }}",
+            "value_type": "={{ $json.db_record.value_type }}",
+            "credential_ref": "={{ $json.db_record.credential_ref }}",
+            "scope": "={{ $json.db_record.scope }}",
+            "environment": "={{ $json.db_record.environment }}",
+            "notes": "={{ $json.db_record.notes }}",
+            "is_active": "={{ $json.db_record.is_active }}",
+            "created_at": "={{ $json.db_record.created_at }}",
+            "updated_at": "={{ $json.db_record.updated_at }}",
+            "updated_by": "={{ $json.db_record.updated_by }}"
+          }
+        },
+        "options": {
+          "onConflict": "updateOnConflict",
+          "conflictColumns": ["key", "environment", "scope"],
+          "updateColumns": ["value", "value_type", "credential_ref", "notes", "is_active", "updated_at", "updated_by"]
+        }
       },
       "id": "6",
       "name": "Upsert Setting",
       "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2,
-      "position": [
-        1040,
-        120
-      ]
+      "typeVersion": 2.5,
+      "position": [1040, 120],
+      "credentials": {
+        "postgres": {
+          "id": "postgres_ytb",
+          "name": "PostgreSQL YTB"
+        }
+      },
+      "continueOnFail": true
     },
     {
       "parameters": {
         "language": "javascript",
-        "code": "const base = $node['Build Record'].json.response_base;\nreturn [\n  {\n    json: {\n      ...base,\n      dry_run: false\n    }\n  }\n];"
+        "code": "const input = $node['Build Record'].json;\nconst dbResult = $json;\n\nif (dbResult.error) {\n  return [\n    {\n      json: {\n        ...input.response_base,\n        status: 'ERROR',\n        error: dbResult.error,\n        message: 'Failed to upsert setting'\n      }\n    }\n  ];\n}\n\nreturn [\n  {\n    json: {\n      ...input.response_base,\n      status: 'SUCCESS',\n      message: 'Setting upserted successfully',\n      affected_rows: dbResult.affectedRows || 1\n    }\n  }\n];"
       },
       "id": "7",
       "name": "Success Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        1300,
-        120
-      ]
+      "position": [1300, 120]
     }
   ],
   "connections": {
     "Form Trigger": {
       "main": [
-        [
-          {
-            "node": "Normalize Input",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{"node": "Normalize Input", "type": "main", "index": 0}]
       ]
     },
     "Normalize Input": {
       "main": [
-        [
-          {
-            "node": "Build Record",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{"node": "Build Record", "type": "main", "index": 0}]
       ]
     },
     "Build Record": {
       "main": [
-        [
-          {
-            "node": "Is Dry Run?",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{"node": "Is Dry Run?", "type": "main", "index": 0}]
       ]
     },
     "Is Dry Run?": {
       "main": [
-        [
-          {
-            "node": "Dry Run Response",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Upsert Setting",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{"node": "Dry Run Response", "type": "main", "index": 0}],
+        [{"node": "Upsert Setting", "type": "main", "index": 0}]
       ]
     },
     "Upsert Setting": {
       "main": [
-        [
-          {
-            "node": "Success Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{"node": "Success Response", "type": "main", "index": 0}]
       ]
     }
   },
   "active": false,
-  "settings": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
   "versionId": "00000000-0000-0000-0000-000000000009",
   "meta": {
-    "templateCredsSetupCompleted": false
+    "templateCredsSetupCompleted": true
   },
   "id": "9"
 }

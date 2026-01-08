@@ -2,91 +2,68 @@
   "name": "WF-01 Orchestrator",
   "nodes": [
     {
-      "parameters": {},
-      "id": "1",
-      "name": "Manual Trigger",
-      "type": "n8n-nodes-base.manualTrigger",
-      "typeVersion": 1,
-      "position": [
-        0,
-        0
-      ]
-    },
-    {
       "parameters": {
-        "keepOnlySet": true,
-        "values": {
-          "string": [
-            {"name": "mode", "value": "dry_run"},
-            {"name": "environment", "value": "staging"},
-            {"name": "scope", "value": "global"},
-            {"name": "channel_id", "value": ""},
-            {"name": "title", "value": "Su dövranı necə işləyir"},
-            {"name": "category", "value": "education"},
-            {"name": "language", "value": "az"},
-            {"name": "keywords_raw", "value": "su, dövran, təbiət"},
-            {"name": "summary", "value": "Su dövranının əsas mərhələləri haqqında qısa izah"},
-            {"name": "runtime_overrides_json", "value": "{\"publish\": {\"publish_enabled\": false}, \"runtime\": {\"publish_off\": true}}"}
-          ]
+        "httpMethod": "POST",
+        "path": "wf-01",
+        "responseMode": "lastNode",
+        "options": {
+          "responseData": "firstEntryJson"
         }
       },
-      "id": "2",
-      "name": "Set Input Params",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 2,
-      "position": [
-        220,
-        0
-      ]
+      "id": "1",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "webhookId": "wf-01-trigger"
     },
     {
       "parameters": {
         "language": "javascript",
-        "code": "const crypto = require('crypto');\nconst input = $json;\nconst now = new Date().toISOString();\nconst runId = `run_${crypto.randomUUID()}`;\n\nconst keywords = String(input.keywords_raw || '')\n  .split(',')\n  .map((item) => item.trim())\n  .filter((item) => item.length > 0);\n\nlet runtimeOverrides = {};\nif (input.runtime_overrides_json) {\n  runtimeOverrides = JSON.parse(input.runtime_overrides_json);\n}\n\nconst manifest = {\n  manifest_version: '2.0',\n  topic: {\n    title: input.title,\n    category: input.category,\n    language: input.language,\n    keywords,\n    summary: input.summary,\n    source_references: []\n  },\n  script: {\n    draft: '',\n    approved: '',\n    review_notes: [],\n    last_reviewed_at: null\n  },\n  assets: {\n    scene_plan: [],\n    items: [],\n    voiceover: {\n      provider: '',\n      voice_id: '',\n      speed: 1.0,\n      pitch: 0.0,\n      output_format: 'mp3',\n      voiceover_url_signed: null\n    }\n  },\n  render: {\n    resolution: '1920x1080',\n    fps: 30,\n    codec: 'h264',\n    bitrate_kbps: 8000,\n    render_id: null,\n    render_status: 'not_started'\n  },\n  publish: {\n    channel_id: input.channel_id || '',\n    title: '',\n    description: '',\n    tags: [],\n    privacy: 'unlisted',\n    scheduled_at: null,\n    youtube_video_id: null,\n    publish_status: 'not_published'\n  },\n  analytics: {\n    enabled: true,\n    tracking_tags: [],\n    first_publish_at: null,\n    last_metrics_pull_at: null,\n    metrics: {}\n  },\n  final: {\n    status: '',\n    summary: '',\n    completed_at: null\n  },\n  audit: {\n    created_by: 'wf-01',\n    updated_by: 'wf-01',\n    change_log: [\n      {\n        at: now,\n        by: 'wf-01',\n        change: `step=init status=ok run_id=${runId} mode=${input.mode}`\n      }\n    ]\n  },\n  timestamps: {\n    created_at: now,\n    updated_at: now,\n    phase: 'ideation'\n  }\n};\n\nreturn [\n  {\n    json: {\n      run_id: runId,\n      mode: input.mode,\n      scene_assets: [],\n      voiceover_url_signed: null,\n      render_id: null,\n      youtube_video_id: null,\n      manifest,\n      environment: input.environment,\n      scope: input.scope,\n      channel_id: input.channel_id || null,\n      runtime_overrides: runtimeOverrides,\n      status: 'IN_PROGRESS'\n    }\n  }\n];"
+        "code": "const crypto = require('crypto');\nconst input = $json;\nconst now = new Date().toISOString();\nconst runId = input.run_id || `run_${crypto.randomUUID()}`;\n\n// Get base URL from env or input\nconst n8nBaseUrl = $env.N8N_BASE_URL || input.n8n_base_url || 'http://localhost:5678';\n\nconst keywords = String(input.keywords_raw || '')\n  .split(',')\n  .map((item) => item.trim())\n  .filter((item) => item.length > 0);\n\nlet runtimeOverrides = {};\nif (input.runtime_overrides_json) {\n  try {\n    runtimeOverrides = JSON.parse(input.runtime_overrides_json);\n  } catch (e) {\n    runtimeOverrides = input.runtime_overrides || {};\n  }\n} else if (input.runtime_overrides) {\n  runtimeOverrides = input.runtime_overrides;\n}\n\nconst manifest = {\n  manifest_version: '2.0',\n  topic: {\n    title: input.title || '',\n    category: input.category || 'education',\n    language: input.language || 'az',\n    keywords,\n    summary: input.summary || '',\n    source_references: []\n  },\n  script: {\n    draft: '',\n    approved: '',\n    review_notes: [],\n    last_reviewed_at: null\n  },\n  assets: {\n    scene_plan: [],\n    items: [],\n    voiceover: {\n      provider: '',\n      voice_id: '',\n      speed: 1.0,\n      pitch: 0.0,\n      output_format: 'mp3',\n      voiceover_url_signed: null\n    }\n  },\n  render: {\n    resolution: '1920x1080',\n    fps: 30,\n    codec: 'h264',\n    bitrate_kbps: 8000,\n    render_id: null,\n    render_status: 'not_started'\n  },\n  publish: {\n    channel_id: input.channel_id || '',\n    title: '',\n    description: '',\n    tags: [],\n    privacy: 'unlisted',\n    scheduled_at: null,\n    youtube_video_id: null,\n    publish_status: 'not_published'\n  },\n  analytics: {\n    enabled: true,\n    tracking_tags: [],\n    first_publish_at: null,\n    last_metrics_pull_at: null,\n    metrics: {}\n  },\n  final: {\n    status: '',\n    summary: '',\n    completed_at: null\n  },\n  audit: {\n    created_by: 'wf-01',\n    updated_by: 'wf-01',\n    change_log: [\n      {\n        at: now,\n        by: 'wf-01',\n        change: `step=init status=ok run_id=${runId} mode=${input.mode || 'dry_run'}`\n      }\n    ]\n  },\n  timestamps: {\n    created_at: now,\n    updated_at: now,\n    phase: 'ideation'\n  }\n};\n\nreturn [\n  {\n    json: {\n      run_id: runId,\n      mode: input.mode || 'dry_run',\n      scene_assets: [],\n      voiceover_url_signed: null,\n      render_id: null,\n      youtube_video_id: null,\n      manifest,\n      environment: input.environment || 'staging',\n      scope: input.scope || 'global',\n      channel_id: input.channel_id || null,\n      runtime_overrides: runtimeOverrides,\n      n8n_base_url: n8nBaseUrl,\n      status: 'IN_PROGRESS'\n    }\n  }\n];"
       },
       "id": "3",
       "name": "Init Contract",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        460,
-        0
-      ]
+      "position": [260, 0]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:5678/webhook/wf-10-get-config",
+        "url": "={{$json.n8n_base_url}}/webhook/wf-10-get-config",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{$json}}",
+        "jsonBody": "={{JSON.stringify($json)}}",
         "options": {
-          "timeout": 120000
+          "timeout": 120000,
+          "retry": {
+            "maxRetries": 3,
+            "retryInterval": 1000,
+            "retryIntervalMultiplier": 2
+          }
         }
       },
       "id": "4",
       "name": "Call WF-10 Get Config",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [
-        720,
-        0
-      ],
+      "position": [520, 0],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
       "continueOnFail": true
     },
     {
       "parameters": {
         "language": "javascript",
-        "code": "const init = $node['Init Contract'].json;\nconst response = $json;\nconst now = new Date().toISOString();\n\nconst failed = !response || response.error || response.statusCode >= 400 || !response.resolved_config;\n\nif (failed) {\n  init.manifest.timestamps.phase = 'failed_preconfig';\n  init.manifest.timestamps.updated_at = now;\n  init.manifest.final.status = 'FAILED_PRECONFIG';\n  init.manifest.final.summary = 'wf-10 config resolve failed';\n  init.manifest.final.completed_at = now;\n  init.status = 'FAILED_PRECONFIG';\n  init.manifest.audit.change_log.push({\n    at: now,\n    by: 'wf-01',\n    change: `step=wf-10 status=FAILED error_code=FAILED_PRECONFIG error_message=wf-10-unavailable run_id=${init.run_id} mode=${init.mode}`\n  });\n  return [\n    {\n      json: {\n        ...init,\n        resolved_config: null,\n        halt: true\n      }\n    }\n  ];\n}\n\ninit.manifest.audit.change_log.push({\n  at: now,\n  by: 'wf-01',\n  change: `step=wf-10 status=COMPLETED run_id=${init.run_id} mode=${init.mode}`\n});\ninit.manifest.timestamps.updated_at = now;\n\nreturn [\n  {\n    json: {\n      ...init,\n      resolved_config: response.resolved_config,\n      halt: false\n    }\n  }\n];"
+        "code": "const init = $node['Init Contract'].json;\nconst response = $json;\nconst now = new Date().toISOString();\n\nconst failed = !response || response.error || response.statusCode >= 400 || !response.resolved_config;\n\nif (failed) {\n  init.manifest.timestamps.phase = 'failed_preconfig';\n  init.manifest.timestamps.updated_at = now;\n  init.manifest.final.status = 'FAILED_PRECONFIG';\n  init.manifest.final.summary = 'wf-10 config resolve failed';\n  init.manifest.final.completed_at = now;\n  init.status = 'FAILED_PRECONFIG';\n  init.manifest.audit.change_log.push({\n    at: now,\n    by: 'wf-01',\n    change: `step=wf-10 status=FAILED error_code=FAILED_PRECONFIG error_message=wf-10-unavailable run_id=${init.run_id} mode=${init.mode}`\n  });\n  return [\n    {\n      json: {\n        ...init,\n        resolved_config: null,\n        halt: true\n      }\n    }\n  ];\n}\n\n// Update n8n_base_url from resolved config if available\nconst baseUrl = response.resolved_config?.n8n?.base_url || init.n8n_base_url;\n\ninit.manifest.audit.change_log.push({\n  at: now,\n  by: 'wf-01',\n  change: `step=wf-10 status=COMPLETED run_id=${init.run_id} mode=${init.mode}`\n});\ninit.manifest.timestamps.updated_at = now;\n\nreturn [\n  {\n    json: {\n      ...init,\n      resolved_config: response.resolved_config,\n      n8n_base_url: baseUrl,\n      halt: false\n    }\n  }\n];"
       },
       "id": "5",
       "name": "Apply WF-10 Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        980,
-        0
-      ]
+      "position": [780, 0]
     },
     {
       "parameters": {
@@ -103,42 +80,39 @@
       "name": "Halt After WF-10?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [
-        1240,
-        0
-      ]
+      "position": [1040, 0]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:5678/webhook/wf-02",
+        "url": "={{$json.n8n_base_url}}/webhook/wf-02",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{$json}}"
+        "jsonBody": "={{JSON.stringify($json)}}",
+        "options": {
+          "timeout": 120000
+        }
       },
       "id": "7",
       "name": "Call WF-02",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [
-        1500,
-        0
-      ],
+      "position": [1300, 0],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
       "continueOnFail": true
     },
     {
       "parameters": {
         "language": "javascript",
-        "code": "const prev = $node['Apply WF-10 Result'].json;\nconst response = $json;\nconst now = new Date().toISOString();\nconst failed = !response || response.status === 'FAILED_WF_02';\n\nif (failed) {\n  prev.status = 'FAILED_AT_WF_02';\n  prev.manifest.final.status = 'FAILED_AT_WF_02';\n  prev.manifest.final.summary = 'wf-02 failed';\n  prev.manifest.final.completed_at = now;\n  prev.manifest.timestamps.phase = 'failed_wf_02';\n  prev.manifest.timestamps.updated_at = now;\n  prev.manifest.audit.change_log.push({\n    at: now,\n    by: 'wf-01',\n    change: `step=wf-02 status=FAILED run_id=${prev.run_id} mode=${prev.mode}`\n  });\n  return [{ json: { ...prev, halt: true } }];\n}\n\nresponse.manifest.audit.change_log.push({\n  at: now,\n  by: 'wf-01',\n  change: `step=wf-02 status=COMPLETED run_id=${response.run_id} mode=${response.mode}`\n});\nreturn [{ json: { ...response, halt: false } }];"
+        "code": "const prev = $node['Apply WF-10 Result'].json;\nconst response = $json;\nconst now = new Date().toISOString();\nconst failed = !response || response.status === 'FAILED_WF_02';\n\nif (failed) {\n  prev.status = 'FAILED_AT_WF_02';\n  prev.manifest.final.status = 'FAILED_AT_WF_02';\n  prev.manifest.final.summary = 'wf-02 failed';\n  prev.manifest.final.completed_at = now;\n  prev.manifest.timestamps.phase = 'failed_wf_02';\n  prev.manifest.timestamps.updated_at = now;\n  prev.manifest.audit.change_log.push({\n    at: now,\n    by: 'wf-01',\n    change: `step=wf-02 status=FAILED run_id=${prev.run_id} mode=${prev.mode}`\n  });\n  return [{ json: { ...prev, halt: true } }];\n}\n\nresponse.manifest.audit.change_log.push({\n  at: now,\n  by: 'wf-01',\n  change: `step=wf-02 status=COMPLETED run_id=${response.run_id} mode=${response.mode}`\n});\nreturn [{ json: { ...response, n8n_base_url: prev.n8n_base_url, halt: false } }];"
       },
       "id": "8",
       "name": "Handle WF-02",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        1760,
-        0
-      ]
+      "position": [1560, 0]
     },
     {
       "parameters": {
@@ -155,42 +129,39 @@
       "name": "Halt After WF-02?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [
-        2020,
-        0
-      ]
+      "position": [1820, 0]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:5678/webhook/wf-03",
+        "url": "={{$json.n8n_base_url}}/webhook/wf-03",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{$json}}"
+        "jsonBody": "={{JSON.stringify($json)}}",
+        "options": {
+          "timeout": 120000
+        }
       },
       "id": "10",
       "name": "Call WF-03",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [
-        2280,
-        0
-      ],
+      "position": [2080, 0],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
       "continueOnFail": true
     },
     {
       "parameters": {
         "language": "javascript",
-        "code": "const response = $json;\nconst now = new Date().toISOString();\nconst failed = !response || response.status === 'FAILED_WF_03';\n\nif (failed) {\n  response.status = 'FAILED_AT_WF_03';\n  response.manifest.final.status = 'FAILED_AT_WF_03';\n  response.manifest.final.summary = 'wf-03 failed';\n  response.manifest.final.completed_at = now;\n  response.manifest.timestamps.phase = 'failed_wf_03';\n  response.manifest.timestamps.updated_at = now;\n  response.manifest.audit.change_log.push({\n    at: now,\n    by: 'wf-01',\n    change: `step=wf-03 status=FAILED run_id=${response.run_id} mode=${response.mode}`\n  });\n  return [{ json: { ...response, halt: true } }];\n}\n\nresponse.manifest.audit.change_log.push({\n  at: now,\n  by: 'wf-01',\n  change: `step=wf-03 status=COMPLETED run_id=${response.run_id} mode=${response.mode}`\n});\nreturn [{ json: { ...response, halt: false } }];"
+        "code": "const prev = $node['Handle WF-02'].json;\nconst response = $json;\nconst now = new Date().toISOString();\nconst failed = !response || response.status === 'FAILED_WF_03';\n\nif (failed) {\n  const fallback = prev;\n  fallback.status = 'FAILED_AT_WF_03';\n  fallback.manifest.final.status = 'FAILED_AT_WF_03';\n  fallback.manifest.final.summary = 'wf-03 failed';\n  fallback.manifest.final.completed_at = now;\n  fallback.manifest.timestamps.phase = 'failed_wf_03';\n  fallback.manifest.timestamps.updated_at = now;\n  fallback.manifest.audit.change_log.push({\n    at: now,\n    by: 'wf-01',\n    change: `step=wf-03 status=FAILED run_id=${fallback.run_id} mode=${fallback.mode}`\n  });\n  return [{ json: { ...fallback, halt: true } }];\n}\n\nresponse.manifest.audit.change_log.push({\n  at: now,\n  by: 'wf-01',\n  change: `step=wf-03 status=COMPLETED run_id=${response.run_id} mode=${response.mode}`\n});\nreturn [{ json: { ...response, n8n_base_url: prev.n8n_base_url, halt: false } }];"
       },
       "id": "11",
       "name": "Handle WF-03",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        2540,
-        0
-      ]
+      "position": [2340, 0]
     },
     {
       "parameters": {
@@ -207,42 +178,39 @@
       "name": "Halt After WF-03?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [
-        2800,
-        0
-      ]
+      "position": [2600, 0]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:5678/webhook/wf-04",
+        "url": "={{$json.n8n_base_url}}/webhook/wf-04",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{$json}}"
+        "jsonBody": "={{JSON.stringify($json)}}",
+        "options": {
+          "timeout": 120000
+        }
       },
       "id": "13",
       "name": "Call WF-04",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [
-        3060,
-        0
-      ],
+      "position": [2860, 0],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
       "continueOnFail": true
     },
     {
       "parameters": {
         "language": "javascript",
-        "code": "const response = $json;\nconst now = new Date().toISOString();\nconst failed = !response || response.status === 'FAILED_WF_04';\n\nif (failed) {\n  response.status = 'FAILED_AT_WF_04';\n  response.manifest.final.status = 'FAILED_AT_WF_04';\n  response.manifest.final.summary = 'wf-04 failed';\n  response.manifest.final.completed_at = now;\n  response.manifest.timestamps.phase = 'failed_wf_04';\n  response.manifest.timestamps.updated_at = now;\n  response.manifest.audit.change_log.push({\n    at: now,\n    by: 'wf-01',\n    change: `step=wf-04 status=FAILED run_id=${response.run_id} mode=${response.mode}`\n  });\n  return [{ json: { ...response, halt: true } }];\n}\n\nresponse.manifest.audit.change_log.push({\n  at: now,\n  by: 'wf-01',\n  change: `step=wf-04 status=COMPLETED run_id=${response.run_id} mode=${response.mode}`\n});\nreturn [{ json: { ...response, halt: false } }];"
+        "code": "const prev = $node['Handle WF-03'].json;\nconst response = $json;\nconst now = new Date().toISOString();\nconst failed = !response || response.status === 'FAILED_WF_04';\n\nif (failed) {\n  const fallback = prev;\n  fallback.status = 'FAILED_AT_WF_04';\n  fallback.manifest.final.status = 'FAILED_AT_WF_04';\n  fallback.manifest.final.summary = 'wf-04 failed';\n  fallback.manifest.final.completed_at = now;\n  fallback.manifest.timestamps.phase = 'failed_wf_04';\n  fallback.manifest.timestamps.updated_at = now;\n  fallback.manifest.audit.change_log.push({\n    at: now,\n    by: 'wf-01',\n    change: `step=wf-04 status=FAILED run_id=${fallback.run_id} mode=${fallback.mode}`\n  });\n  return [{ json: { ...fallback, halt: true } }];\n}\n\nresponse.manifest.audit.change_log.push({\n  at: now,\n  by: 'wf-01',\n  change: `step=wf-04 status=COMPLETED run_id=${response.run_id} mode=${response.mode}`\n});\nreturn [{ json: { ...response, n8n_base_url: prev.n8n_base_url, halt: false } }];"
       },
       "id": "14",
       "name": "Handle WF-04",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        3320,
-        0
-      ]
+      "position": [3120, 0]
     },
     {
       "parameters": {
@@ -259,42 +227,39 @@
       "name": "Halt After WF-04?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [
-        3580,
-        0
-      ]
+      "position": [3380, 0]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:5678/webhook/wf-05",
+        "url": "={{$json.n8n_base_url}}/webhook/wf-05",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{$json}}"
+        "jsonBody": "={{JSON.stringify($json)}}",
+        "options": {
+          "timeout": 120000
+        }
       },
       "id": "16",
       "name": "Call WF-05",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [
-        3840,
-        0
-      ],
+      "position": [3640, 0],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
       "continueOnFail": true
     },
     {
       "parameters": {
         "language": "javascript",
-        "code": "const response = $json;\nconst now = new Date().toISOString();\nconst failed = !response || response.status === 'FAILED_WF_05';\n\nif (failed) {\n  response.status = 'FAILED_AT_WF_05';\n  response.manifest.final.status = 'FAILED_AT_WF_05';\n  response.manifest.final.summary = 'wf-05 failed';\n  response.manifest.final.completed_at = now;\n  response.manifest.timestamps.phase = 'failed_wf_05';\n  response.manifest.timestamps.updated_at = now;\n  response.manifest.audit.change_log.push({\n    at: now,\n    by: 'wf-01',\n    change: `step=wf-05 status=FAILED run_id=${response.run_id} mode=${response.mode}`\n  });\n  return [{ json: { ...response, halt: true } }];\n}\n\nresponse.manifest.audit.change_log.push({\n  at: now,\n  by: 'wf-01',\n  change: `step=wf-05 status=COMPLETED run_id=${response.run_id} mode=${response.mode}`\n});\nreturn [{ json: { ...response, halt: false } }];"
+        "code": "const prev = $node['Handle WF-04'].json;\nconst response = $json;\nconst now = new Date().toISOString();\nconst failed = !response || response.status === 'FAILED_WF_05';\n\nif (failed) {\n  const fallback = prev;\n  fallback.status = 'FAILED_AT_WF_05';\n  fallback.manifest.final.status = 'FAILED_AT_WF_05';\n  fallback.manifest.final.summary = 'wf-05 failed';\n  fallback.manifest.final.completed_at = now;\n  fallback.manifest.timestamps.phase = 'failed_wf_05';\n  fallback.manifest.timestamps.updated_at = now;\n  fallback.manifest.audit.change_log.push({\n    at: now,\n    by: 'wf-01',\n    change: `step=wf-05 status=FAILED run_id=${fallback.run_id} mode=${fallback.mode}`\n  });\n  return [{ json: { ...fallback, halt: true } }];\n}\n\nresponse.manifest.audit.change_log.push({\n  at: now,\n  by: 'wf-01',\n  change: `step=wf-05 status=COMPLETED run_id=${response.run_id} mode=${response.mode}`\n});\nreturn [{ json: { ...response, n8n_base_url: prev.n8n_base_url, halt: false } }];"
       },
       "id": "17",
       "name": "Handle WF-05",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        4100,
-        0
-      ]
+      "position": [3900, 0]
     },
     {
       "parameters": {
@@ -311,42 +276,39 @@
       "name": "Halt After WF-05?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [
-        4360,
-        0
-      ]
+      "position": [4160, 0]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:5678/webhook/wf-06",
+        "url": "={{$json.n8n_base_url}}/webhook/wf-06",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{$json}}"
+        "jsonBody": "={{JSON.stringify($json)}}",
+        "options": {
+          "timeout": 120000
+        }
       },
       "id": "19",
       "name": "Call WF-06",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [
-        4620,
-        0
-      ],
+      "position": [4420, 0],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
       "continueOnFail": true
     },
     {
       "parameters": {
         "language": "javascript",
-        "code": "const response = $json;\nconst now = new Date().toISOString();\nconst failed = !response || response.status === 'FAILED_WF_06';\n\nif (failed) {\n  response.status = 'FAILED_AT_WF_06';\n  response.manifest.final.status = 'FAILED_AT_WF_06';\n  response.manifest.final.summary = 'wf-06 failed';\n  response.manifest.final.completed_at = now;\n  response.manifest.timestamps.phase = 'failed_wf_06';\n  response.manifest.timestamps.updated_at = now;\n  response.manifest.audit.change_log.push({\n    at: now,\n    by: 'wf-01',\n    change: `step=wf-06 status=FAILED run_id=${response.run_id} mode=${response.mode}`\n  });\n  return [{ json: { ...response, halt: true } }];\n}\n\nresponse.manifest.audit.change_log.push({\n  at: now,\n  by: 'wf-01',\n  change: `step=wf-06 status=COMPLETED run_id=${response.run_id} mode=${response.mode}`\n});\nreturn [{ json: { ...response, halt: false } }];"
+        "code": "const prev = $node['Handle WF-05'].json;\nconst response = $json;\nconst now = new Date().toISOString();\nconst failed = !response || response.status === 'FAILED_WF_06';\n\nif (failed) {\n  const fallback = prev;\n  fallback.status = 'FAILED_AT_WF_06';\n  fallback.manifest.final.status = 'FAILED_AT_WF_06';\n  fallback.manifest.final.summary = 'wf-06 failed';\n  fallback.manifest.final.completed_at = now;\n  fallback.manifest.timestamps.phase = 'failed_wf_06';\n  fallback.manifest.timestamps.updated_at = now;\n  fallback.manifest.audit.change_log.push({\n    at: now,\n    by: 'wf-01',\n    change: `step=wf-06 status=FAILED run_id=${fallback.run_id} mode=${fallback.mode}`\n  });\n  return [{ json: { ...fallback, halt: true } }];\n}\n\nresponse.manifest.audit.change_log.push({\n  at: now,\n  by: 'wf-01',\n  change: `step=wf-06 status=COMPLETED run_id=${response.run_id} mode=${response.mode}`\n});\nreturn [{ json: { ...response, n8n_base_url: prev.n8n_base_url, halt: false } }];"
       },
       "id": "20",
       "name": "Handle WF-06",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        4880,
-        0
-      ]
+      "position": [4680, 0]
     },
     {
       "parameters": {
@@ -363,42 +325,39 @@
       "name": "Halt After WF-06?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [
-        5140,
-        0
-      ]
+      "position": [4940, 0]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:5678/webhook/wf-07",
+        "url": "={{$json.n8n_base_url}}/webhook/wf-07",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{$json}}"
+        "jsonBody": "={{JSON.stringify($json)}}",
+        "options": {
+          "timeout": 300000
+        }
       },
       "id": "22",
       "name": "Call WF-07",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [
-        5400,
-        0
-      ],
+      "position": [5200, 0],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
       "continueOnFail": true
     },
     {
       "parameters": {
         "language": "javascript",
-        "code": "const response = $json;\nconst now = new Date().toISOString();\nconst failed = !response || response.status === 'FAILED_WF_07';\n\nif (failed) {\n  response.status = 'FAILED_AT_WF_07';\n  response.manifest.final.status = 'FAILED_AT_WF_07';\n  response.manifest.final.summary = 'wf-07 failed';\n  response.manifest.final.completed_at = now;\n  response.manifest.timestamps.phase = 'failed_wf_07';\n  response.manifest.timestamps.updated_at = now;\n  response.manifest.audit.change_log.push({\n    at: now,\n    by: 'wf-01',\n    change: `step=wf-07 status=FAILED run_id=${response.run_id} mode=${response.mode}`\n  });\n  return [{ json: { ...response, halt: true } }];\n}\n\nresponse.manifest.audit.change_log.push({\n  at: now,\n  by: 'wf-01',\n  change: `step=wf-07 status=COMPLETED run_id=${response.run_id} mode=${response.mode}`\n});\nreturn [{ json: { ...response, halt: false } }];"
+        "code": "const prev = $node['Handle WF-06'].json;\nconst response = $json;\nconst now = new Date().toISOString();\nconst failed = !response || response.status === 'FAILED_WF_07';\n\nif (failed) {\n  const fallback = prev;\n  fallback.status = 'FAILED_AT_WF_07';\n  fallback.manifest.final.status = 'FAILED_AT_WF_07';\n  fallback.manifest.final.summary = 'wf-07 failed';\n  fallback.manifest.final.completed_at = now;\n  fallback.manifest.timestamps.phase = 'failed_wf_07';\n  fallback.manifest.timestamps.updated_at = now;\n  fallback.manifest.audit.change_log.push({\n    at: now,\n    by: 'wf-01',\n    change: `step=wf-07 status=FAILED run_id=${fallback.run_id} mode=${fallback.mode}`\n  });\n  return [{ json: { ...fallback, halt: true } }];\n}\n\nresponse.manifest.audit.change_log.push({\n  at: now,\n  by: 'wf-01',\n  change: `step=wf-07 status=COMPLETED run_id=${response.run_id} mode=${response.mode}`\n});\nreturn [{ json: { ...response, n8n_base_url: prev.n8n_base_url, halt: false } }];"
       },
       "id": "23",
       "name": "Handle WF-07",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        5660,
-        0
-      ]
+      "position": [5460, 0]
     },
     {
       "parameters": {
@@ -415,42 +374,39 @@
       "name": "Halt After WF-07?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [
-        5920,
-        0
-      ]
+      "position": [5720, 0]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:5678/webhook/wf-08",
+        "url": "={{$json.n8n_base_url}}/webhook/wf-08",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{$json}}"
+        "jsonBody": "={{JSON.stringify($json)}}",
+        "options": {
+          "timeout": 300000
+        }
       },
       "id": "25",
       "name": "Call WF-08",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [
-        6180,
-        0
-      ],
+      "position": [5980, 0],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
       "continueOnFail": true
     },
     {
       "parameters": {
         "language": "javascript",
-        "code": "const response = $json;\nconst now = new Date().toISOString();\nconst failed = !response || response.status === 'FAILED_WF_08';\n\nif (failed) {\n  response.status = 'FAILED_AT_WF_08';\n  response.manifest.final.status = 'FAILED_AT_WF_08';\n  response.manifest.final.summary = 'wf-08 failed';\n  response.manifest.final.completed_at = now;\n  response.manifest.timestamps.phase = 'failed_wf_08';\n  response.manifest.timestamps.updated_at = now;\n  response.manifest.audit.change_log.push({\n    at: now,\n    by: 'wf-01',\n    change: `step=wf-08 status=FAILED run_id=${response.run_id} mode=${response.mode}`\n  });\n  return [{ json: { ...response, halt: true } }];\n}\n\nresponse.manifest.audit.change_log.push({\n  at: now,\n  by: 'wf-01',\n  change: `step=wf-08 status=COMPLETED run_id=${response.run_id} mode=${response.mode}`\n});\nreturn [{ json: { ...response, halt: false } }];"
+        "code": "const prev = $node['Handle WF-07'].json;\nconst response = $json;\nconst now = new Date().toISOString();\nconst failed = !response || response.status === 'FAILED_WF_08';\n\nif (failed) {\n  const fallback = prev;\n  fallback.status = 'FAILED_AT_WF_08';\n  fallback.manifest.final.status = 'FAILED_AT_WF_08';\n  fallback.manifest.final.summary = 'wf-08 failed';\n  fallback.manifest.final.completed_at = now;\n  fallback.manifest.timestamps.phase = 'failed_wf_08';\n  fallback.manifest.timestamps.updated_at = now;\n  fallback.manifest.audit.change_log.push({\n    at: now,\n    by: 'wf-01',\n    change: `step=wf-08 status=FAILED run_id=${fallback.run_id} mode=${fallback.mode}`\n  });\n  return [{ json: { ...fallback, halt: true } }];\n}\n\nresponse.manifest.audit.change_log.push({\n  at: now,\n  by: 'wf-01',\n  change: `step=wf-08 status=COMPLETED run_id=${response.run_id} mode=${response.mode}`\n});\nreturn [{ json: { ...response, halt: false } }];"
       },
       "id": "26",
       "name": "Handle WF-08",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        6440,
-        0
-      ]
+      "position": [6240, 0]
     },
     {
       "parameters": {
@@ -467,260 +423,178 @@
       "name": "Halt After WF-08?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [
-        6700,
-        0
-      ]
+      "position": [6500, 0]
     },
     {
       "parameters": {
         "language": "javascript",
-        "code": "const response = $json;\nconst now = new Date().toISOString();\n\nresponse.status = 'COMPLETED_DRY_RUN';\nresponse.manifest.final.status = 'COMPLETED_DRY_RUN';\nresponse.manifest.final.summary = 'dry-run pipeline completed';\nresponse.manifest.final.completed_at = now;\nresponse.manifest.timestamps.updated_at = now;\nresponse.manifest.audit.change_log.push({\n  at: now,\n  by: 'wf-01',\n  change: `step=finalize status=COMPLETED_DRY_RUN run_id=${response.run_id} mode=${response.mode}`\n});\n\nreturn [{ json: response }];"
+        "code": "const response = $json;\nconst now = new Date().toISOString();\n\nconst finalStatus = response.mode === 'dry_run' ? 'COMPLETED_DRY_RUN' : 'COMPLETED';\nresponse.status = finalStatus;\nresponse.manifest.final.status = finalStatus;\nresponse.manifest.final.summary = response.mode === 'dry_run' ? 'dry-run pipeline completed' : 'pipeline completed successfully';\nresponse.manifest.final.completed_at = now;\nresponse.manifest.timestamps.updated_at = now;\nresponse.manifest.audit.change_log.push({\n  at: now,\n  by: 'wf-01',\n  change: `step=finalize status=${finalStatus} run_id=${response.run_id} mode=${response.mode}`\n});\n\n// Clean up internal fields\ndelete response.halt;\ndelete response.n8n_base_url;\n\nreturn [{ json: response }];"
       },
       "id": "28",
       "name": "Finalize Success",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        6960,
-        0
-      ]
+      "position": [6760, 0]
     },
     {
       "parameters": {
         "language": "javascript",
-        "code": "const response = $json;\nresponse.halt = true;\nreturn [{ json: response }];"
+        "code": "const response = $json;\nconst now = new Date().toISOString();\n\n// Clean up internal fields\ndelete response.n8n_base_url;\nresponse.halt = true;\n\nreturn [{ json: response }];"
       },
       "id": "29",
       "name": "Return Failure",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        1240,
-        240
-      ]
+      "position": [1040, 240]
     }
   ],
   "connections": {
-    "Manual Trigger": {
+    "Webhook Trigger": {
       "main": [
-        [
-          {"node": "Set Input Params", "type": "main", "index": 0}
-        ]
-      ]
-    },
-    "Set Input Params": {
-      "main": [
-        [
-          {"node": "Init Contract", "type": "main", "index": 0}
-        ]
+        [{"node": "Init Contract", "type": "main", "index": 0}]
       ]
     },
     "Init Contract": {
       "main": [
-        [
-          {"node": "Call WF-10 Get Config", "type": "main", "index": 0}
-        ]
+        [{"node": "Call WF-10 Get Config", "type": "main", "index": 0}]
       ]
     },
     "Call WF-10 Get Config": {
       "main": [
-        [
-          {"node": "Apply WF-10 Result", "type": "main", "index": 0}
-        ]
+        [{"node": "Apply WF-10 Result", "type": "main", "index": 0}]
       ]
     },
     "Apply WF-10 Result": {
       "main": [
-        [
-          {"node": "Halt After WF-10?", "type": "main", "index": 0}
-        ]
+        [{"node": "Halt After WF-10?", "type": "main", "index": 0}]
       ]
     },
     "Halt After WF-10?": {
       "main": [
-        [
-          {"node": "Return Failure", "type": "main", "index": 0}
-        ],
-        [
-          {"node": "Call WF-02", "type": "main", "index": 0}
-        ]
+        [{"node": "Return Failure", "type": "main", "index": 0}],
+        [{"node": "Call WF-02", "type": "main", "index": 0}]
       ]
     },
     "Call WF-02": {
       "main": [
-        [
-          {"node": "Handle WF-02", "type": "main", "index": 0}
-        ]
+        [{"node": "Handle WF-02", "type": "main", "index": 0}]
       ]
     },
     "Handle WF-02": {
       "main": [
-        [
-          {"node": "Halt After WF-02?", "type": "main", "index": 0}
-        ]
+        [{"node": "Halt After WF-02?", "type": "main", "index": 0}]
       ]
     },
     "Halt After WF-02?": {
       "main": [
-        [
-          {"node": "Return Failure", "type": "main", "index": 0}
-        ],
-        [
-          {"node": "Call WF-03", "type": "main", "index": 0}
-        ]
+        [{"node": "Return Failure", "type": "main", "index": 0}],
+        [{"node": "Call WF-03", "type": "main", "index": 0}]
       ]
     },
     "Call WF-03": {
       "main": [
-        [
-          {"node": "Handle WF-03", "type": "main", "index": 0}
-        ]
+        [{"node": "Handle WF-03", "type": "main", "index": 0}]
       ]
     },
     "Handle WF-03": {
       "main": [
-        [
-          {"node": "Halt After WF-03?", "type": "main", "index": 0}
-        ]
+        [{"node": "Halt After WF-03?", "type": "main", "index": 0}]
       ]
     },
     "Halt After WF-03?": {
       "main": [
-        [
-          {"node": "Return Failure", "type": "main", "index": 0}
-        ],
-        [
-          {"node": "Call WF-04", "type": "main", "index": 0}
-        ]
+        [{"node": "Return Failure", "type": "main", "index": 0}],
+        [{"node": "Call WF-04", "type": "main", "index": 0}]
       ]
     },
     "Call WF-04": {
       "main": [
-        [
-          {"node": "Handle WF-04", "type": "main", "index": 0}
-        ]
+        [{"node": "Handle WF-04", "type": "main", "index": 0}]
       ]
     },
     "Handle WF-04": {
       "main": [
-        [
-          {"node": "Halt After WF-04?", "type": "main", "index": 0}
-        ]
+        [{"node": "Halt After WF-04?", "type": "main", "index": 0}]
       ]
     },
     "Halt After WF-04?": {
       "main": [
-        [
-          {"node": "Return Failure", "type": "main", "index": 0}
-        ],
-        [
-          {"node": "Call WF-05", "type": "main", "index": 0}
-        ]
+        [{"node": "Return Failure", "type": "main", "index": 0}],
+        [{"node": "Call WF-05", "type": "main", "index": 0}]
       ]
     },
     "Call WF-05": {
       "main": [
-        [
-          {"node": "Handle WF-05", "type": "main", "index": 0}
-        ]
+        [{"node": "Handle WF-05", "type": "main", "index": 0}]
       ]
     },
     "Handle WF-05": {
       "main": [
-        [
-          {"node": "Halt After WF-05?", "type": "main", "index": 0}
-        ]
+        [{"node": "Halt After WF-05?", "type": "main", "index": 0}]
       ]
     },
     "Halt After WF-05?": {
       "main": [
-        [
-          {"node": "Return Failure", "type": "main", "index": 0}
-        ],
-        [
-          {"node": "Call WF-06", "type": "main", "index": 0}
-        ]
+        [{"node": "Return Failure", "type": "main", "index": 0}],
+        [{"node": "Call WF-06", "type": "main", "index": 0}]
       ]
     },
     "Call WF-06": {
       "main": [
-        [
-          {"node": "Handle WF-06", "type": "main", "index": 0}
-        ]
+        [{"node": "Handle WF-06", "type": "main", "index": 0}]
       ]
     },
     "Handle WF-06": {
       "main": [
-        [
-          {"node": "Halt After WF-06?", "type": "main", "index": 0}
-        ]
+        [{"node": "Halt After WF-06?", "type": "main", "index": 0}]
       ]
     },
     "Halt After WF-06?": {
       "main": [
-        [
-          {"node": "Return Failure", "type": "main", "index": 0}
-        ],
-        [
-          {"node": "Call WF-07", "type": "main", "index": 0}
-        ]
+        [{"node": "Return Failure", "type": "main", "index": 0}],
+        [{"node": "Call WF-07", "type": "main", "index": 0}]
       ]
     },
     "Call WF-07": {
       "main": [
-        [
-          {"node": "Handle WF-07", "type": "main", "index": 0}
-        ]
+        [{"node": "Handle WF-07", "type": "main", "index": 0}]
       ]
     },
     "Handle WF-07": {
       "main": [
-        [
-          {"node": "Halt After WF-07?", "type": "main", "index": 0}
-        ]
+        [{"node": "Halt After WF-07?", "type": "main", "index": 0}]
       ]
     },
     "Halt After WF-07?": {
       "main": [
-        [
-          {"node": "Return Failure", "type": "main", "index": 0}
-        ],
-        [
-          {"node": "Call WF-08", "type": "main", "index": 0}
-        ]
+        [{"node": "Return Failure", "type": "main", "index": 0}],
+        [{"node": "Call WF-08", "type": "main", "index": 0}]
       ]
     },
     "Call WF-08": {
       "main": [
-        [
-          {"node": "Handle WF-08", "type": "main", "index": 0}
-        ]
+        [{"node": "Handle WF-08", "type": "main", "index": 0}]
       ]
     },
     "Handle WF-08": {
       "main": [
-        [
-          {"node": "Halt After WF-08?", "type": "main", "index": 0}
-        ]
+        [{"node": "Halt After WF-08?", "type": "main", "index": 0}]
       ]
     },
     "Halt After WF-08?": {
       "main": [
-        [
-          {"node": "Return Failure", "type": "main", "index": 0}
-        ],
-        [
-          {"node": "Finalize Success", "type": "main", "index": 0}
-        ]
+        [{"node": "Return Failure", "type": "main", "index": 0}],
+        [{"node": "Finalize Success", "type": "main", "index": 0}]
       ]
     }
   },
   "active": false,
-  "settings": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
   "versionId": "00000000-0000-0000-0000-000000000001",
   "meta": {
-    "templateCredsSetupCompleted": false
+    "templateCredsSetupCompleted": true
   },
   "id": "1"
 }
