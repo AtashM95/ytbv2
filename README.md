@@ -7,7 +7,7 @@ Bu repo, WF-00…WF-12 arxitekturası üçün “YouTube Helal Otomasyon Sistemi
 - Dəyişməz contract sahələri və manifest spesifikasiyası
 - Settings Panel (WF-11) və Config Manager (WF-10) davranışı
 - Test checklist və golden sample JSON-lar
-- n8n workflow export-ları (`exports/n8n-workflows/`)
+- n8n workflow export-ları (`exports/n8n-workflows/`, `exports/n8n/` deprecated)
 
 ## Struktur
 - `docs/00_overall_architecture.md` — ümumi arxitektura
@@ -18,7 +18,7 @@ Bu repo, WF-00…WF-12 arxitekturası üçün “YouTube Helal Otomasyon Sistemi
 - `docs/05_testing_checklist.md` — test checklist və import sırası
 - `docs/06_manifest_spec.md` — manifest strukturu
 - `exports/golden_samples/` — golden sample JSON-lar
-- `exports/n8n-workflows/` — n8n workflow export-ları
+- `exports/n8n-workflows/` — n8n workflow export-ları (kanonik)
 
 ## Workflow-lar
 - **WF-00 Main Router** — giriş sorğularını yönləndirir.

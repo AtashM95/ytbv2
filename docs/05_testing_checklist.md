@@ -56,8 +56,14 @@
 
 ### WF-10
 - Config resolve və storage required key yoxlaması.
+- Output-da `resolved_at` field mövcuddur.
 - Production modda storage config əskikdirsə `FAILED_CONFIG_STORAGE` qaytarılır.
 - Test modda storage config əskikdirsə xəbərdarlıqla davam edir.
+
+### WF-11
+- Form input-larına uyğun `key/value` satırları DB-yə yazılır.
+- Upsert conflict target: `key + scope + environment`.
+- Secrets yalnız `credential_ref`/`env_ref` kimi saxlanılır.
 
 ## Contract yoxlamaları
 - Contract field adları dəyişməyib: run_id, mode, scene_assets, voiceover_url_signed, render_id, youtube_video_id, manifest.
