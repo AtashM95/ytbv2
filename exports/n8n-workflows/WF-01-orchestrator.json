@@ -1,0 +1,433 @@
+{
+  "name": "WF-01 Orchestrator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wf-01-orchestrator",
+        "responseMode": "lastNode",
+        "options": { "responseData": "firstEntryJson" }
+      },
+      "id": "trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "webhookId": "wf-01-orchestrator"
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const crypto = require('crypto');\nconst input = $json;\nconst now = new Date().toISOString();\nconst runId = input.run_id || `run_${crypto.randomUUID()}`;\nconst n8nBaseUrl = $env.N8N_BASE_URL || 'http://localhost:5678';\n\n// Initialize manifest\nconst manifest = {\n  manifest_version: '2.0',\n  run_id: runId,\n  mode: input.mode || 'test',\n  video_type: input.video_type || 'normal',\n  \n  topic: {\n    title: input.selected_topic || input.custom_topic || '',\n    category: input.category || 'education',\n    language: input.language || 'en',\n    keywords: input.keywords || [],\n    summary: '',\n    source_references: []\n  },\n  \n  script: {\n    draft: '',\n    approved: '',\n    review_notes: [],\n    last_reviewed_at: null\n  },\n  \n  assets: {\n    scene_plan: [],\n    items: [],\n    voiceover: {\n      provider: 'elevenlabs',\n      voice_id: '',\n      url: null\n    }\n  },\n  \n  render: {\n    resolution: input.quality?.video || '1080p',\n    fps: 30,\n    render_id: null,\n    render_status: 'not_started',\n    render_url: null\n  },\n  \n  thumbnail: {\n    url: null,\n    variants: []\n  },\n  \n  publish: {\n    channel_id: input.channel_id || '',\n    title: '',\n    description: '',\n    tags: [],\n    privacy: 'unlisted',\n    youtube_video_id: null,\n    publish_status: 'not_published'\n  },\n  \n  analytics: {\n    trending_score: input.trending_score || null,\n    estimated_cpm: input.estimated_cpm || null,\n    competition_level: input.competition_level || null\n  },\n  \n  pipeline_status: {\n    config: 'pending',\n    script: 'pending',\n    review: 'pending',\n    voice: 'pending',\n    assets: 'pending',\n    render: 'pending',\n    thumbnail: 'pending',\n    publish: 'pending'\n  },\n  \n  audit: {\n    created_by: 'wf-01',\n    updated_by: 'wf-01',\n    change_log: [{\n      at: now,\n      by: 'wf-01',\n      action: 'INIT',\n      details: `Pipeline started - mode=${input.mode} type=${input.video_type}`\n    }]\n  },\n  \n  timestamps: {\n    created_at: now,\n    updated_at: now,\n    phase: 'init'\n  }\n};\n\nreturn [{\n  json: {\n    run_id: runId,\n    mode: input.mode || 'test',\n    video_type: input.video_type || 'normal',\n    category: input.category,\n    language: input.language || 'en',\n    target_countries: input.target_countries || ['US'],\n    video_length: input.video_length || {},\n    quality: input.quality || {},\n    options: input.options || {},\n    selected_topic: input.selected_topic || input.custom_topic,\n    keywords: input.keywords || [],\n    trend_analysis: input.trend_analysis || null,\n    manifest: manifest,\n    n8n_base_url: n8nBaseUrl,\n    status: 'IN_PROGRESS',\n    errors: [],\n    warnings: []\n  }\n}];"
+      },
+      "id": "init",
+      "name": "Init Pipeline",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.n8n_base_url}}/webhook/wf-10-config",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": { "timeout": 120000 }
+      },
+      "id": "call_config",
+      "name": "Call WF-10 Config",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [520, 0],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const prev = $node['Init Pipeline'].json;\nconst configResult = $json;\nconst now = new Date().toISOString();\n\nif (configResult.error || !configResult.resolved_config) {\n  prev.manifest.pipeline_status.config = 'failed';\n  prev.manifest.timestamps.phase = 'failed_config';\n  prev.errors.push('Config resolution failed');\n  prev.status = 'FAILED_CONFIG';\n  prev.halt = true;\n  return [{ json: prev }];\n}\n\nprev.resolved_config = configResult.resolved_config;\nprev.computed = configResult.computed;\nprev.manifest.pipeline_status.config = 'completed';\nprev.manifest.audit.change_log.push({\n  at: now, by: 'wf-01', action: 'CONFIG_LOADED',\n  details: `Config source: ${configResult.config_source}`\n});\nprev.halt = false;\n\nreturn [{ json: prev }];"
+      },
+      "id": "handle_config",
+      "name": "Handle Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [{ "value1": "={{$json.halt}}", "operation": "isTrue" }]
+        }
+      },
+      "id": "halt_config",
+      "name": "Halt After Config?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1040, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.n8n_base_url}}/webhook/wf-03-script",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": { "timeout": 180000 }
+      },
+      "id": "call_script",
+      "name": "Call WF-03 Script",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1300, 100],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const prev = $node['Handle Config'].json;\nconst scriptResult = $json;\nconst now = new Date().toISOString();\n\nif (scriptResult.error || scriptResult.status === 'FAILED') {\n  prev.manifest.pipeline_status.script = 'failed';\n  prev.manifest.timestamps.phase = 'failed_script';\n  prev.errors.push(scriptResult.error_message || 'Script generation failed');\n  prev.status = 'FAILED_SCRIPT';\n  prev.halt = true;\n  return [{ json: prev }];\n}\n\nprev.manifest.script.draft = scriptResult.script_draft || '';\nprev.manifest.assets.scene_plan = scriptResult.scene_plan || [];\nprev.manifest.pipeline_status.script = 'completed';\nprev.manifest.audit.change_log.push({\n  at: now, by: 'wf-03', action: 'SCRIPT_GENERATED',\n  details: `Script length: ${(scriptResult.script_draft || '').length} chars`\n});\nprev.halt = false;\n\nreturn [{ json: prev }];"
+      },
+      "id": "handle_script",
+      "name": "Handle Script",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 100]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [{ "value1": "={{$json.halt}}", "operation": "isTrue" }]
+        }
+      },
+      "id": "halt_script",
+      "name": "Halt After Script?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1820, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.n8n_base_url}}/webhook/wf-04-review",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": { "timeout": 120000 }
+      },
+      "id": "call_review",
+      "name": "Call WF-04 Review",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2080, 200],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const prev = $node['Handle Script'].json;\nconst reviewResult = $json;\nconst now = new Date().toISOString();\n\nif (reviewResult.error || reviewResult.status === 'FAILED') {\n  prev.manifest.pipeline_status.review = 'failed';\n  prev.errors.push('Script review failed');\n  prev.status = 'FAILED_REVIEW';\n  prev.halt = true;\n  return [{ json: prev }];\n}\n\nprev.manifest.script.approved = reviewResult.script_approved || prev.manifest.script.draft;\nprev.manifest.script.review_notes = reviewResult.review_notes || [];\nprev.manifest.script.last_reviewed_at = now;\nprev.manifest.publish.title = reviewResult.youtube_title || prev.manifest.topic.title;\nprev.manifest.publish.description = reviewResult.youtube_description || '';\nprev.manifest.publish.tags = reviewResult.youtube_tags || [];\nprev.manifest.pipeline_status.review = 'completed';\nprev.manifest.audit.change_log.push({ at: now, by: 'wf-04', action: 'SCRIPT_APPROVED' });\nprev.halt = false;\n\nreturn [{ json: prev }];"
+      },
+      "id": "handle_review",
+      "name": "Handle Review",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2340, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [{ "value1": "={{$json.halt}}", "operation": "isTrue" }]
+        }
+      },
+      "id": "halt_review",
+      "name": "Halt After Review?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2600, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.n8n_base_url}}/webhook/wf-05-voice",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": { "timeout": 180000 }
+      },
+      "id": "call_voice",
+      "name": "Call WF-05 Voice",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2860, 300],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const prev = $node['Handle Review'].json;\nconst voiceResult = $json;\nconst now = new Date().toISOString();\n\nif (voiceResult.error || voiceResult.status === 'FAILED') {\n  prev.manifest.pipeline_status.voice = 'failed';\n  prev.errors.push('Voiceover generation failed');\n  prev.status = 'FAILED_VOICE';\n  prev.halt = true;\n  return [{ json: prev }];\n}\n\nprev.manifest.assets.voiceover.url = voiceResult.voiceover_url;\nprev.manifest.assets.voiceover.voice_id = voiceResult.voice_id;\nprev.voiceover_url = voiceResult.voiceover_url;\nprev.manifest.pipeline_status.voice = 'completed';\nprev.manifest.audit.change_log.push({ at: now, by: 'wf-05', action: 'VOICEOVER_GENERATED' });\nprev.halt = false;\n\nreturn [{ json: prev }];"
+      },
+      "id": "handle_voice",
+      "name": "Handle Voice",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3120, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [{ "value1": "={{$json.halt}}", "operation": "isTrue" }]
+        }
+      },
+      "id": "halt_voice",
+      "name": "Halt After Voice?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [3380, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.n8n_base_url}}/webhook/wf-06-assets",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": { "timeout": 300000 }
+      },
+      "id": "call_assets",
+      "name": "Call WF-06 Assets",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [3640, 400],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const prev = $node['Handle Voice'].json;\nconst assetsResult = $json;\nconst now = new Date().toISOString();\n\nif (assetsResult.error || assetsResult.status === 'FAILED') {\n  prev.manifest.pipeline_status.assets = 'failed';\n  prev.errors.push('Asset collection failed');\n  prev.status = 'FAILED_ASSETS';\n  prev.halt = true;\n  return [{ json: prev }];\n}\n\nprev.manifest.assets.items = assetsResult.assets || [];\nprev.scene_assets = assetsResult.assets || [];\nprev.manifest.pipeline_status.assets = 'completed';\nprev.manifest.audit.change_log.push({\n  at: now, by: 'wf-06', action: 'ASSETS_COLLECTED',\n  details: `${(assetsResult.assets || []).length} assets`\n});\nprev.halt = false;\n\nreturn [{ json: prev }];"
+      },
+      "id": "handle_assets",
+      "name": "Handle Assets",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3900, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [{ "value1": "={{$json.halt}}", "operation": "isTrue" }]
+        }
+      },
+      "id": "halt_assets",
+      "name": "Halt After Assets?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [4160, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.n8n_base_url}}/webhook/wf-07-render",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": { "timeout": 600000 }
+      },
+      "id": "call_render",
+      "name": "Call WF-07 Render",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [4420, 500],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 10000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const prev = $node['Handle Assets'].json;\nconst renderResult = $json;\nconst now = new Date().toISOString();\n\nif (renderResult.error || renderResult.status === 'FAILED') {\n  prev.manifest.pipeline_status.render = 'failed';\n  prev.errors.push('Video render failed');\n  prev.status = 'FAILED_RENDER';\n  prev.halt = true;\n  return [{ json: prev }];\n}\n\nprev.manifest.render.render_id = renderResult.render_id;\nprev.manifest.render.render_url = renderResult.render_url;\nprev.manifest.render.render_status = 'completed';\nprev.render_url = renderResult.render_url;\nprev.manifest.pipeline_status.render = 'completed';\nprev.manifest.audit.change_log.push({ at: now, by: 'wf-07', action: 'RENDER_COMPLETED' });\nprev.halt = false;\n\nreturn [{ json: prev }];"
+      },
+      "id": "handle_render",
+      "name": "Handle Render",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4680, 500]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [{ "value1": "={{$json.halt}}", "operation": "isTrue" }]
+        }
+      },
+      "id": "halt_render",
+      "name": "Halt After Render?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [4940, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.n8n_base_url}}/webhook/wf-08-thumbnail",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": { "timeout": 120000 }
+      },
+      "id": "call_thumbnail",
+      "name": "Call WF-08 Thumbnail",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [5200, 600],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const prev = $node['Handle Render'].json;\nconst thumbResult = $json;\nconst now = new Date().toISOString();\n\n// Thumbnail failure is non-critical\nif (thumbResult.error || thumbResult.status === 'FAILED') {\n  prev.manifest.pipeline_status.thumbnail = 'failed';\n  prev.warnings.push('Thumbnail generation failed - using default');\n} else {\n  prev.manifest.thumbnail.url = thumbResult.thumbnail_url;\n  prev.manifest.thumbnail.variants = thumbResult.variants || [];\n  prev.thumbnail_url = thumbResult.thumbnail_url;\n  prev.manifest.pipeline_status.thumbnail = 'completed';\n  prev.manifest.audit.change_log.push({ at: now, by: 'wf-08', action: 'THUMBNAIL_GENERATED' });\n}\n\nprev.halt = false;\nreturn [{ json: prev }];"
+      },
+      "id": "handle_thumbnail",
+      "name": "Handle Thumbnail",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [5460, 600]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [{ "value1": "={{$json.mode === 'test'}}", "operation": "isTrue" }]
+        }
+      },
+      "id": "is_test",
+      "name": "Is Test Mode?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [5720, 600]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.n8n_base_url}}/webhook/wf-09-publish",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": { "timeout": 300000 }
+      },
+      "id": "call_publish",
+      "name": "Call WF-09 Publish",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [5980, 700],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const prev = $node['Handle Thumbnail'].json;\nconst publishResult = $json;\nconst now = new Date().toISOString();\n\nif (publishResult.error || publishResult.status === 'FAILED') {\n  prev.manifest.pipeline_status.publish = 'failed';\n  prev.errors.push('YouTube publish failed');\n  prev.status = 'FAILED_PUBLISH';\n} else {\n  prev.manifest.publish.youtube_video_id = publishResult.youtube_video_id;\n  prev.manifest.publish.publish_status = 'published';\n  prev.youtube_video_id = publishResult.youtube_video_id;\n  prev.manifest.pipeline_status.publish = 'completed';\n  prev.manifest.audit.change_log.push({\n    at: now, by: 'wf-09', action: 'PUBLISHED',\n    details: `YouTube ID: ${publishResult.youtube_video_id}`\n  });\n  prev.status = 'COMPLETED';\n}\n\nprev.manifest.timestamps.updated_at = now;\nprev.manifest.timestamps.phase = 'completed';\n\nreturn [{ json: prev }];"
+      },
+      "id": "handle_publish",
+      "name": "Handle Publish",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [6240, 700]
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const prev = $json;\nconst now = new Date().toISOString();\n\n// Test mode - skip publish, mark as test complete\nprev.manifest.pipeline_status.publish = 'skipped';\nprev.manifest.audit.change_log.push({\n  at: now, by: 'wf-01', action: 'TEST_COMPLETED',\n  details: 'Test mode - publish skipped'\n});\nprev.manifest.timestamps.updated_at = now;\nprev.manifest.timestamps.phase = 'test_completed';\nprev.status = 'TEST_COMPLETED';\n\nreturn [{ json: prev }];"
+      },
+      "id": "test_complete",
+      "name": "Test Complete",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [5980, 500]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "mergeByFields": { "values": [] },
+        "options": {}
+      },
+      "id": "merge_final",
+      "name": "Merge Final",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [6500, 600]
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const result = $json;\nconst now = new Date().toISOString();\n\n// Update database with final status\nconst finalResponse = {\n  run_id: result.run_id,\n  status: result.status,\n  mode: result.mode,\n  video_type: result.video_type,\n  \n  // URLs\n  render_url: result.render_url,\n  thumbnail_url: result.thumbnail_url,\n  youtube_video_id: result.youtube_video_id,\n  \n  // Pipeline status\n  pipeline_status: result.manifest?.pipeline_status,\n  \n  // Errors/Warnings\n  errors: result.errors || [],\n  warnings: result.warnings || [],\n  \n  // Full manifest for reference\n  manifest: result.manifest,\n  \n  completed_at: now\n};\n\nreturn [{ json: finalResponse }];"
+      },
+      "id": "final_response",
+      "name": "Build Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [6760, 600]
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "// Return failure response\nconst result = $json;\nresult.manifest.timestamps.updated_at = new Date().toISOString();\nreturn [{ json: result }];"
+      },
+      "id": "failure_response",
+      "name": "Failure Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2080, -100]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": { "main": [[{"node": "Init Pipeline", "type": "main", "index": 0}]] },
+    "Init Pipeline": { "main": [[{"node": "Call WF-10 Config", "type": "main", "index": 0}]] },
+    "Call WF-10 Config": { "main": [[{"node": "Handle Config", "type": "main", "index": 0}]] },
+    "Handle Config": { "main": [[{"node": "Halt After Config?", "type": "main", "index": 0}]] },
+    "Halt After Config?": { "main": [[{"node": "Failure Response", "type": "main", "index": 0}], [{"node": "Call WF-03 Script", "type": "main", "index": 0}]] },
+    "Call WF-03 Script": { "main": [[{"node": "Handle Script", "type": "main", "index": 0}]] },
+    "Handle Script": { "main": [[{"node": "Halt After Script?", "type": "main", "index": 0}]] },
+    "Halt After Script?": { "main": [[{"node": "Failure Response", "type": "main", "index": 0}], [{"node": "Call WF-04 Review", "type": "main", "index": 0}]] },
+    "Call WF-04 Review": { "main": [[{"node": "Handle Review", "type": "main", "index": 0}]] },
+    "Handle Review": { "main": [[{"node": "Halt After Review?", "type": "main", "index": 0}]] },
+    "Halt After Review?": { "main": [[{"node": "Failure Response", "type": "main", "index": 0}], [{"node": "Call WF-05 Voice", "type": "main", "index": 0}]] },
+    "Call WF-05 Voice": { "main": [[{"node": "Handle Voice", "type": "main", "index": 0}]] },
+    "Handle Voice": { "main": [[{"node": "Halt After Voice?", "type": "main", "index": 0}]] },
+    "Halt After Voice?": { "main": [[{"node": "Failure Response", "type": "main", "index": 0}], [{"node": "Call WF-06 Assets", "type": "main", "index": 0}]] },
+    "Call WF-06 Assets": { "main": [[{"node": "Handle Assets", "type": "main", "index": 0}]] },
+    "Handle Assets": { "main": [[{"node": "Halt After Assets?", "type": "main", "index": 0}]] },
+    "Halt After Assets?": { "main": [[{"node": "Failure Response", "type": "main", "index": 0}], [{"node": "Call WF-07 Render", "type": "main", "index": 0}]] },
+    "Call WF-07 Render": { "main": [[{"node": "Handle Render", "type": "main", "index": 0}]] },
+    "Handle Render": { "main": [[{"node": "Halt After Render?", "type": "main", "index": 0}]] },
+    "Halt After Render?": { "main": [[{"node": "Failure Response", "type": "main", "index": 0}], [{"node": "Call WF-08 Thumbnail", "type": "main", "index": 0}]] },
+    "Call WF-08 Thumbnail": { "main": [[{"node": "Handle Thumbnail", "type": "main", "index": 0}]] },
+    "Handle Thumbnail": { "main": [[{"node": "Is Test Mode?", "type": "main", "index": 0}]] },
+    "Is Test Mode?": { "main": [[{"node": "Test Complete", "type": "main", "index": 0}], [{"node": "Call WF-09 Publish", "type": "main", "index": 0}]] },
+    "Call WF-09 Publish": { "main": [[{"node": "Handle Publish", "type": "main", "index": 0}]] },
+    "Handle Publish": { "main": [[{"node": "Merge Final", "type": "main", "index": 0}]] },
+    "Test Complete": { "main": [[{"node": "Merge Final", "type": "main", "index": 0}]] },
+    "Merge Final": { "main": [[{"node": "Build Response", "type": "main", "index": 0}]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "versionId": "yt-studio-wf-01-v1",
+  "meta": { "templateCredsSetupCompleted": true },
+  "id": "wf-01"
+}

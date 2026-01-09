@@ -1,0 +1,285 @@
+{
+  "name": "WF-00 Main Router",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "main-router",
+        "responseMode": "lastNode",
+        "options": {
+          "responseData": "firstEntryJson"
+        }
+      },
+      "id": "trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "webhookId": "main-router"
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const crypto = require('crypto');\nconst input = $json;\nconst now = new Date().toISOString();\n\ntry {\n  // Generate unique run_id\n  const runId = input.run_id || `run_${crypto.randomUUID()}`;\n  \n  // Validate required fields\n  const mode = input.mode || 'test';\n  if (!['test', 'auto_trend', 'manual'].includes(mode)) {\n    throw new Error(`Invalid mode: ${mode}. Must be test, auto_trend, or manual`);\n  }\n  \n  const videoType = input.video_type || 'normal';\n  if (!['normal', 'short', 'both', 'short_from_long'].includes(videoType)) {\n    throw new Error(`Invalid video_type: ${videoType}`);\n  }\n  \n  // Validate short_from_long requires source_video_url\n  if (videoType === 'short_from_long' && !input.source_video_url) {\n    throw new Error('source_video_url is required for short_from_long video type');\n  }\n  \n  // Validate category\n  const validCategories = ['tech_ai', 'finance', 'health', 'education', 'gaming', 'cooking', 'travel', 'real_estate', 'reviews', 'pets', 'custom'];\n  const category = input.category || 'education';\n  if (!validCategories.includes(category)) {\n    throw new Error(`Invalid category: ${category}`);\n  }\n  \n  // Manual mode or custom category requires custom_topic\n  if ((mode === 'manual' || category === 'custom') && !input.custom_topic) {\n    throw new Error('custom_topic is required for manual mode or custom category');\n  }\n  \n  // Validate language\n  const validLanguages = ['en', 'ar', 'tr', 'es', 'fr', 'de', 'pt', 'hi'];\n  const language = input.language || 'en';\n  if (!validLanguages.includes(language)) {\n    throw new Error(`Invalid language: ${language}`);\n  }\n  \n  // Build normalized request\n  const normalizedRequest = {\n    run_id: runId,\n    mode: mode,\n    video_type: videoType,\n    category: category,\n    custom_topic: input.custom_topic || null,\n    language: language,\n    target_countries: input.target_countries || ['US', 'UK', 'CA', 'AU'],\n    video_length: input.video_length || {\n      normal: 'medium_8_12',\n      short: '60s'\n    },\n    quality: input.quality || {\n      video: '1080p',\n      voice: 'premium'\n    },\n    options: {\n      auto_thumbnail: input.options?.auto_thumbnail !== false,\n      seo_optimization: input.options?.seo_optimization !== false,\n      auto_tags: input.options?.auto_tags !== false,\n      best_time_publish: input.options?.best_time_publish || false,\n      ab_thumbnail_test: input.options?.ab_thumbnail_test || false,\n      competitor_analysis: input.options?.competitor_analysis || false\n    },\n    source_video_url: input.source_video_url || null,\n    created_at: now,\n    \n    // Routing decisions\n    routing: {\n      needs_trend_analysis: mode === 'auto_trend',\n      needs_short_extraction: videoType === 'short_from_long',\n      create_both_types: videoType === 'both',\n      is_test_mode: mode === 'test'\n    }\n  };\n  \n  return [{ json: normalizedRequest }];\n  \n} catch (error) {\n  return [{\n    json: {\n      error: true,\n      error_code: 'VALIDATION_ERROR',\n      error_message: error.message,\n      status: 'FAILED_VALIDATION',\n      input: input\n    }\n  }];\n}"
+      },
+      "id": "validate",
+      "name": "Validate & Normalize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.error}}",
+              "operation": "isTrue"
+            }
+          ]
+        }
+      },
+      "id": "check_error",
+      "name": "Has Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [520, 0]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": { "__rl": true, "mode": "list", "value": "public" },
+        "table": { "__rl": true, "mode": "list", "value": "yt_studio_videos" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "run_id": "={{ $json.run_id }}",
+            "mode": "={{ $json.mode }}",
+            "video_type": "={{ $json.video_type }}",
+            "category": "={{ $json.category }}",
+            "custom_topic": "={{ $json.custom_topic }}",
+            "language": "={{ $json.language }}",
+            "target_countries": "={{ $json.target_countries }}",
+            "status": "=pending",
+            "manifest": "={{ JSON.stringify($json) }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "insert_video",
+      "name": "Create Video Record",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [780, 100],
+      "credentials": {
+        "postgres": {
+          "id": "postgres_yt_studio",
+          "name": "PostgreSQL YT Studio"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.routing.needs_short_extraction}}",
+              "operation": "isTrue"
+            }
+          ]
+        }
+      },
+      "id": "check_short_extract",
+      "name": "Short Extraction?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1040, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.N8N_BASE_URL || 'http://localhost:5678'}}/webhook/wf-12-short-extractor",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($node['Validate & Normalize'].json) }}",
+        "options": {
+          "timeout": 600000
+        }
+      },
+      "id": "call_wf12",
+      "name": "Call WF-12 Short Extractor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1300, 0],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.routing.needs_trend_analysis}}",
+              "operation": "isTrue"
+            }
+          ]
+        }
+      },
+      "id": "check_trend",
+      "name": "Needs Trend Analysis?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1300, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.N8N_BASE_URL || 'http://localhost:5678'}}/webhook/wf-02-trend",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($node['Validate & Normalize'].json) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "call_wf02",
+      "name": "Call WF-02 Trend Analyzer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1560, 100],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const original = $node['Validate & Normalize'].json;\nconst trendResult = $json;\n\n// Merge trend analysis results\nconst merged = {\n  ...original,\n  trend_analysis: trendResult.trend_analysis || null,\n  selected_topic: trendResult.selected_topic || original.custom_topic,\n  keywords: trendResult.keywords || [],\n  estimated_cpm: trendResult.estimated_cpm || null,\n  competition_level: trendResult.competition_level || null,\n  trending_score: trendResult.trending_score || null\n};\n\nreturn [{ json: merged }];"
+      },
+      "id": "merge_trend",
+      "name": "Merge Trend Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1820, 100]
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const original = $node['Validate & Normalize'].json;\n\n// For manual mode, use custom_topic directly\nconst merged = {\n  ...original,\n  selected_topic: original.custom_topic,\n  keywords: [],\n  trend_analysis: null\n};\n\nreturn [{ json: merged }];"
+      },
+      "id": "skip_trend",
+      "name": "Skip Trend Analysis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "mergeByFields": { "values": [] },
+        "options": {}
+      },
+      "id": "merge_paths",
+      "name": "Merge Paths",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [2080, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.N8N_BASE_URL || 'http://localhost:5678'}}/webhook/wf-01-orchestrator",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 1800000
+        }
+      },
+      "id": "call_wf01",
+      "name": "Call WF-01 Orchestrator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2340, 200],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 10000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const result = $json;\nconst now = new Date().toISOString();\n\n// Build final response\nconst response = {\n  run_id: result.run_id,\n  status: result.status || 'COMPLETED',\n  mode: result.mode,\n  video_type: result.video_type,\n  \n  // Results\n  youtube_video_id: result.youtube_video_id,\n  youtube_url: result.youtube_video_id ? `https://youtube.com/watch?v=${result.youtube_video_id}` : null,\n  thumbnail_url: result.thumbnail_url,\n  render_url: result.render_url,\n  \n  // For test mode\n  test_result: result.mode === 'test' ? {\n    pipeline_status: result.pipeline_status || {},\n    preview_url: result.render_url,\n    estimated_production_cost: result.estimated_cost || '$0.15',\n    estimated_production_time: result.estimated_time || '8 minutes'\n  } : null,\n  \n  // Metadata\n  topic: result.selected_topic || result.custom_topic,\n  category: result.category,\n  language: result.language,\n  \n  // Timing\n  started_at: result.created_at,\n  completed_at: now,\n  \n  // Errors if any\n  errors: result.errors || [],\n  warnings: result.warnings || []\n};\n\nreturn [{ json: response }];"
+      },
+      "id": "final_response",
+      "name": "Build Final Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2600, 200]
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "// Return error response\nreturn [{ json: $json }];"
+      },
+      "id": "error_response",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, -100]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{"node": "Validate & Normalize", "type": "main", "index": 0}]]
+    },
+    "Validate & Normalize": {
+      "main": [[{"node": "Has Error?", "type": "main", "index": 0}]]
+    },
+    "Has Error?": {
+      "main": [
+        [{"node": "Error Response", "type": "main", "index": 0}],
+        [{"node": "Create Video Record", "type": "main", "index": 0}]
+      ]
+    },
+    "Create Video Record": {
+      "main": [[{"node": "Short Extraction?", "type": "main", "index": 0}]]
+    },
+    "Short Extraction?": {
+      "main": [
+        [{"node": "Call WF-12 Short Extractor", "type": "main", "index": 0}],
+        [{"node": "Needs Trend Analysis?", "type": "main", "index": 0}]
+      ]
+    },
+    "Needs Trend Analysis?": {
+      "main": [
+        [{"node": "Call WF-02 Trend Analyzer", "type": "main", "index": 0}],
+        [{"node": "Skip Trend Analysis", "type": "main", "index": 0}]
+      ]
+    },
+    "Call WF-02 Trend Analyzer": {
+      "main": [[{"node": "Merge Trend Results", "type": "main", "index": 0}]]
+    },
+    "Merge Trend Results": {
+      "main": [[{"node": "Merge Paths", "type": "main", "index": 0}]]
+    },
+    "Skip Trend Analysis": {
+      "main": [[{"node": "Merge Paths", "type": "main", "index": 0}]]
+    },
+    "Merge Paths": {
+      "main": [[{"node": "Call WF-01 Orchestrator", "type": "main", "index": 0}]]
+    },
+    "Call WF-01 Orchestrator": {
+      "main": [[{"node": "Build Final Response", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "versionId": "yt-studio-wf-00-v1",
+  "meta": { "templateCredsSetupCompleted": true },
+  "id": "wf-00"
+}

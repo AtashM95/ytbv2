@@ -1,0 +1,77 @@
+{
+  "name": "WF-08 Thumbnail Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wf-08-thumbnail",
+        "responseMode": "lastNode",
+        "options": { "responseData": "firstEntryJson" }
+      },
+      "id": "trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "webhookId": "wf-08-thumbnail"
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $json;\nconst config = input.resolved_config || {};\nconst metadata = input.manifest?.metadata || {};\nconst topic = input.selected_topic || input.manifest?.topic?.title || 'Amazing Video';\nconst category = input.category || 'education';\n\n// Extract key visual elements from title\nconst title = metadata.title || topic;\nconst keywords = metadata.tags || [];\n\n// Build thumbnail prompt based on category\nconst categoryStyles = {\n  tech_ai: 'futuristic, neon blue lighting, holographic elements, tech aesthetic',\n  finance: 'gold and green colors, money symbols, professional clean look',\n  health: 'bright vibrant colors, healthy lifestyle imagery, energetic feel',\n  education: 'clean professional look, subtle book or learning elements',\n  gaming: 'dynamic action pose, vibrant colors, gaming aesthetic with effects',\n  cooking: 'appetizing food photography style, warm lighting, kitchen aesthetic',\n  travel: 'stunning landscape, wanderlust feel, adventure aesthetic',\n  real_estate: 'luxury property feel, clean modern architecture',\n  reviews: 'product showcase, clean background, professional lighting',\n  pets: 'cute animal focus, warm friendly colors, playful feel'\n};\n\nconst styleGuide = categoryStyles[category] || categoryStyles.education;\n\n// Build the prompt\nconst thumbnailPrompt = `Create a YouTube thumbnail image:\n\nTOPIC: ${title}\n\nSTYLE: ${styleGuide}\n\nREQUIREMENTS:\n- Eye-catching and click-worthy\n- High contrast colors that pop\n- Simple composition, not cluttered\n- 16:9 aspect ratio optimized for YouTube\n- NO text, NO words, NO letters (text will be added separately)\n- Photorealistic or high-quality 3D render style\n- Strong focal point that draws attention\n- Bright, well-lit, professional quality\n\nKEYWORDS: ${keywords.slice(0, 5).join(', ')}`;\n\nreturn [{\n  json: {\n    ...input,\n    thumbnail_request: {\n      prompt: thumbnailPrompt,\n      title: title,\n      style: styleGuide\n    }\n  }\n}];"
+      },
+      "id": "prepare",
+      "name": "Prepare Thumbnail Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/images/generations",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{$env.OPENAI_API_KEY}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"dall-e-3\",\n  \"prompt\": {{JSON.stringify($json.thumbnail_request.prompt)}},\n  \"n\": 1,\n  \"size\": \"1792x1024\",\n  \"quality\": \"hd\"\n}",
+        "options": { "timeout": 120000 }
+      },
+      "id": "dalle",
+      "name": "Generate Thumbnail",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [520, 0],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $node['Prepare Thumbnail Prompt'].json;\nconst dalleResponse = $json;\nconst now = new Date().toISOString();\n\ntry {\n  if (dalleResponse.error || !dalleResponse.data?.[0]?.url) {\n    throw new Error(dalleResponse.error?.message || 'Thumbnail generation failed');\n  }\n\n  const thumbnailUrl = dalleResponse.data[0].url;\n  const revisedPrompt = dalleResponse.data[0].revised_prompt;\n\n  // In production, you would upload this to permanent storage\n  // The DALL-E URL expires after 1 hour\n  const storageBase = input.resolved_config?.storage?.base_url || 'https://storage.example.com';\n  const permanentUrl = `${storageBase}/thumbnails/${input.run_id}.png?t=${Date.now()}`;\n\n  return [{\n    json: {\n      run_id: input.run_id,\n      mode: input.mode,\n      thumbnail_url: thumbnailUrl,\n      thumbnail_permanent_url: permanentUrl,\n      revised_prompt: revisedPrompt,\n      title_for_overlay: input.thumbnail_request.title,\n      generated_at: now,\n      status: 'THUMBNAIL_GENERATED'\n    }\n  }];\n\n} catch (error) {\n  // Fallback: use first asset as thumbnail\n  const fallbackUrl = input.manifest?.assets?.[0]?.asset_url;\n  \n  return [{\n    json: {\n      run_id: input.run_id,\n      mode: input.mode,\n      thumbnail_url: fallbackUrl || null,\n      fallback_used: true,\n      error_message: error.message,\n      generated_at: now,\n      status: fallbackUrl ? 'THUMBNAIL_FALLBACK' : 'FAILED'\n    }\n  }];\n}"
+      },
+      "id": "process",
+      "name": "Process Thumbnail",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 0]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": { "main": [[{"node": "Prepare Thumbnail Prompt", "type": "main", "index": 0}]] },
+    "Prepare Thumbnail Prompt": { "main": [[{"node": "Generate Thumbnail", "type": "main", "index": 0}]] },
+    "Generate Thumbnail": { "main": [[{"node": "Process Thumbnail", "type": "main", "index": 0}]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "versionId": "yt-studio-wf-08-v1",
+  "meta": { "templateCredsSetupCompleted": true },
+  "id": "wf-08"
+}

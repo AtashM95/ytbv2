@@ -1,0 +1,230 @@
+{
+  "name": "WF-07 Video Renderer",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wf-07-render",
+        "responseMode": "lastNode",
+        "options": { "responseData": "firstEntryJson" }
+      },
+      "id": "trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "webhookId": "wf-07-render"
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $json;\nconst config = input.resolved_config || {};\nconst computed = input.computed || {};\nconst isTest = input.mode === 'test';\n\n// Get assets and voiceover\nconst assets = input.manifest?.assets || [];\nconst voiceoverUrl = input.manifest?.voiceover_url;\nconst script = input.manifest?.script?.approved || '';\n\nif (!assets.length) {\n  return [{\n    json: {\n      ...input,\n      error: true,\n      error_message: 'No assets available for rendering',\n      status: 'FAILED'\n    }\n  }];\n}\n\n// Determine API endpoint based on mode\nconst apiHost = isTest \n  ? 'https://api.shotstack.io/stage' \n  : 'https://api.shotstack.io/v1';\n\n// Build Shotstack timeline\nconst targetDuration = computed.target_duration_sec || (isTest ? 30 : 600);\nconst fps = 30;\nconst outputResolution = input.quality?.video || '1080p';\n\n// Map resolution to Shotstack format\nconst resolutionMap = {\n  '720p': 'hd',\n  '1080p': 'hd',\n  '4k': 'uhd'\n};\n\n// Build clips from assets\nlet currentTime = 0;\nconst clips = assets.map((asset, idx) => {\n  const duration = asset.duration_needed || (targetDuration / assets.length);\n  const clip = {\n    asset: {\n      type: asset.asset_type === 'pexels_video' ? 'video' : 'image',\n      src: asset.asset_url\n    },\n    start: currentTime,\n    length: duration,\n    fit: 'cover',\n    transition: {\n      in: 'fade',\n      out: 'fade'\n    }\n  };\n  \n  // For images, add Ken Burns effect\n  if (asset.asset_type !== 'pexels_video') {\n    clip.effect = 'zoomIn';\n  }\n  \n  currentTime += duration;\n  return clip;\n});\n\n// Build audio track if voiceover exists\nconst soundtrack = [];\nif (voiceoverUrl) {\n  soundtrack.push({\n    asset: {\n      type: 'audio',\n      src: voiceoverUrl\n    },\n    start: 0,\n    length: targetDuration\n  });\n}\n\n// Shotstack edit payload\nconst shotstackPayload = {\n  timeline: {\n    background: '#000000',\n    tracks: [\n      { clips: clips }\n    ],\n    soundtrack: soundtrack.length ? soundtrack : undefined\n  },\n  output: {\n    format: 'mp4',\n    resolution: resolutionMap[outputResolution] || 'hd',\n    fps: fps\n  }\n};\n\nreturn [{\n  json: {\n    ...input,\n    shotstack_api_host: apiHost,\n    shotstack_payload: shotstackPayload,\n    is_test: isTest\n  }\n}];"
+      },
+      "id": "prepare",
+      "name": "Prepare Shotstack Timeline",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.shotstack_api_host}}/render",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{$json.is_test ? $env.SHOTSTACK_SANDBOX_KEY : $env.SHOTSTACK_API_KEY}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify($json.shotstack_payload)}}",
+        "options": { "timeout": 120000 }
+      },
+      "id": "submit_render",
+      "name": "Submit Render Job",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [520, 0],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $node['Prepare Shotstack Timeline'].json;\nconst response = $json;\n\nif (response.error || !response.response?.id) {\n  return [{\n    json: {\n      ...input,\n      error: true,\n      error_message: response.error || response.message || 'Failed to submit render job',\n      status: 'FAILED'\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ...input,\n    render_id: response.response.id,\n    render_status: 'queued',\n    poll_count: 0,\n    max_polls: 60\n  }\n}];"
+      },
+      "id": "get_render_id",
+      "name": "Get Render ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 0]
+    },
+    {
+      "parameters": {
+        "amount": 5,
+        "unit": "seconds"
+      },
+      "id": "wait",
+      "name": "Wait 5 Seconds",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1040, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$json.shotstack_api_host}}/render/{{$json.render_id}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{$json.is_test ? $env.SHOTSTACK_SANDBOX_KEY : $env.SHOTSTACK_API_KEY}}" }
+          ]
+        },
+        "options": { "timeout": 30000 }
+      },
+      "id": "check_status",
+      "name": "Check Render Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1300, 0],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $node['Wait 5 Seconds'].json;\nconst response = $json;\n\nconst status = response.response?.status || 'unknown';\nconst pollCount = (input.poll_count || 0) + 1;\n\nreturn [{\n  json: {\n    ...input,\n    render_status: status,\n    render_url: response.response?.url || null,\n    poll_count: pollCount,\n    render_response: response.response\n  }\n}];"
+      },
+      "id": "parse_status",
+      "name": "Parse Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.render_status}}",
+              "operation": "equals",
+              "value2": "done"
+            }
+          ]
+        }
+      },
+      "id": "is_done",
+      "name": "Render Done?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1820, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.render_status}}",
+              "operation": "equals",
+              "value2": "failed"
+            }
+          ]
+        }
+      },
+      "id": "is_failed",
+      "name": "Render Failed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2080, 100]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.poll_count}}",
+              "operation": "smallerThan",
+              "value2": "={{$json.max_polls}}"
+            }
+          ]
+        }
+      },
+      "id": "can_poll",
+      "name": "Can Poll More?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2340, 200]
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $json;\nconst now = new Date().toISOString();\n\nreturn [{\n  json: {\n    run_id: input.run_id,\n    mode: input.mode,\n    render_url: input.render_url,\n    render_id: input.render_id,\n    render_status: 'completed',\n    is_test: input.is_test,\n    rendered_at: now,\n    status: 'VIDEO_RENDERED'\n  }\n}];"
+      },
+      "id": "success_response",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2080, -100]
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $json;\nconst now = new Date().toISOString();\n\nreturn [{\n  json: {\n    run_id: input.run_id,\n    mode: input.mode,\n    error: true,\n    error_message: 'Render job failed: ' + (input.render_response?.error || 'Unknown error'),\n    render_id: input.render_id,\n    status: 'FAILED'\n  }\n}];"
+      },
+      "id": "failed_response",
+      "name": "Failed Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2340, 0]
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $json;\nconst now = new Date().toISOString();\n\nreturn [{\n  json: {\n    run_id: input.run_id,\n    mode: input.mode,\n    error: true,\n    error_message: 'Render timeout after ' + input.poll_count + ' polls',\n    render_id: input.render_id,\n    status: 'FAILED'\n  }\n}];"
+      },
+      "id": "timeout_response",
+      "name": "Timeout Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2600, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": { "main": [[{"node": "Prepare Shotstack Timeline", "type": "main", "index": 0}]] },
+    "Prepare Shotstack Timeline": { "main": [[{"node": "Submit Render Job", "type": "main", "index": 0}]] },
+    "Submit Render Job": { "main": [[{"node": "Get Render ID", "type": "main", "index": 0}]] },
+    "Get Render ID": { "main": [[{"node": "Wait 5 Seconds", "type": "main", "index": 0}]] },
+    "Wait 5 Seconds": { "main": [[{"node": "Check Render Status", "type": "main", "index": 0}]] },
+    "Check Render Status": { "main": [[{"node": "Parse Status", "type": "main", "index": 0}]] },
+    "Parse Status": { "main": [[{"node": "Render Done?", "type": "main", "index": 0}]] },
+    "Render Done?": {
+      "main": [
+        [{"node": "Success Response", "type": "main", "index": 0}],
+        [{"node": "Render Failed?", "type": "main", "index": 0}]
+      ]
+    },
+    "Render Failed?": {
+      "main": [
+        [{"node": "Failed Response", "type": "main", "index": 0}],
+        [{"node": "Can Poll More?", "type": "main", "index": 0}]
+      ]
+    },
+    "Can Poll More?": {
+      "main": [
+        [{"node": "Wait 5 Seconds", "type": "main", "index": 0}],
+        [{"node": "Timeout Response", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "versionId": "yt-studio-wf-07-v1",
+  "meta": { "templateCredsSetupCompleted": true },
+  "id": "wf-07"
+}

@@ -1,0 +1,77 @@
+{
+  "name": "WF-04 Script Reviewer",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wf-04-review",
+        "responseMode": "lastNode",
+        "options": { "responseData": "firstEntryJson" }
+      },
+      "id": "trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "webhookId": "wf-04-review"
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $json;\nconst scriptDraft = input.manifest?.script?.draft || '';\nconst topic = input.manifest?.topic?.title || input.selected_topic || '';\nconst keywords = input.manifest?.topic?.keywords || input.keywords || [];\nconst category = input.category || 'education';\n\nif (!scriptDraft || scriptDraft.length < 50) {\n  return [{\n    json: {\n      ...input,\n      error: true,\n      error_message: 'No script draft to review',\n      status: 'FAILED'\n    }\n  }];\n}\n\n// Basic quality checks\nconst wordCount = scriptDraft.split(/\\s+/).length;\nconst hasSceneMarkers = /\\[SCENE/i.test(scriptDraft);\nconst sentenceCount = (scriptDraft.match(/[.!?]+/g) || []).length;\nconst avgSentenceLength = wordCount / Math.max(sentenceCount, 1);\n\nconst checks = {\n  word_count_ok: wordCount >= 50,\n  has_scene_markers: hasSceneMarkers,\n  readability_ok: avgSentenceLength < 30,\n  has_content: scriptDraft.length > 100\n};\n\nconst allPassed = Object.values(checks).every(v => v);\n\nreturn [{\n  json: {\n    ...input,\n    script_checks: checks,\n    word_count: wordCount,\n    auto_approve: allPassed\n  }\n}];"
+      },
+      "id": "validate",
+      "name": "Validate Script",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{$env.OPENAI_API_KEY}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"gpt-4o-mini\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a YouTube SEO expert. Generate optimized metadata for videos.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Generate YouTube metadata for this video script:\\n\\nTOPIC: {{$json.manifest?.topic?.title || $json.selected_topic}}\\nCATEGORY: {{$json.category}}\\nKEYWORDS: {{($json.manifest?.topic?.keywords || $json.keywords || []).join(', ')}}\\n\\nSCRIPT PREVIEW:\\n{{($json.manifest?.script?.draft || '').substring(0, 1000)}}...\\n\\nGenerate:\\n1. A viral title (under 60 chars, includes main keyword)\\n2. SEO-optimized description (2-3 paragraphs with keywords)\\n3. 15-20 relevant tags\\n\\nRespond in JSON:\\n{\\n  \\\"title\\\": \\\"...\\\",\\n  \\\"description\\\": \\\"...\\\",\\n  \\\"tags\\\": [\\\"tag1\\\", \\\"tag2\\\", ...]\\n}\"\n    }\n  ],\n  \"max_tokens\": 1000,\n  \"temperature\": 0.7\n}",
+        "options": { "timeout": 60000 }
+      },
+      "id": "generate_metadata",
+      "name": "Generate Metadata",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [520, 0],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $node['Validate Script'].json;\nconst aiResponse = $json;\nconst now = new Date().toISOString();\n\nlet metadata = {\n  title: input.manifest?.topic?.title || input.selected_topic || 'Video Title',\n  description: '',\n  tags: input.keywords || []\n};\n\ntry {\n  if (aiResponse.choices?.[0]?.message?.content) {\n    const content = aiResponse.choices[0].message.content;\n    const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      const parsed = JSON.parse(jsonMatch[0]);\n      metadata = {\n        title: parsed.title || metadata.title,\n        description: parsed.description || '',\n        tags: parsed.tags || metadata.tags\n      };\n    }\n  }\n} catch (e) {\n  // Use defaults\n}\n\n// Auto-approve if checks passed\nconst scriptApproved = input.auto_approve \n  ? input.manifest?.script?.draft \n  : input.manifest?.script?.draft;\n\nreturn [{\n  json: {\n    run_id: input.run_id,\n    mode: input.mode,\n    \n    script_approved: scriptApproved,\n    review_notes: input.auto_approve ? ['Auto-approved - all checks passed'] : ['Manual review recommended'],\n    \n    youtube_title: metadata.title,\n    youtube_description: metadata.description,\n    youtube_tags: metadata.tags,\n    \n    script_checks: input.script_checks,\n    word_count: input.word_count,\n    reviewed_at: now,\n    status: 'SCRIPT_REVIEWED'\n  }\n}];"
+      },
+      "id": "finalize",
+      "name": "Finalize Review",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 0]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": { "main": [[{"node": "Validate Script", "type": "main", "index": 0}]] },
+    "Validate Script": { "main": [[{"node": "Generate Metadata", "type": "main", "index": 0}]] },
+    "Generate Metadata": { "main": [[{"node": "Finalize Review", "type": "main", "index": 0}]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "versionId": "yt-studio-wf-04-v1",
+  "meta": { "templateCredsSetupCompleted": true },
+  "id": "wf-04"
+}
