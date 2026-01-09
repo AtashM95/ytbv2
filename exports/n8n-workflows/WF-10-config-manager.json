@@ -14,19 +14,25 @@
       "name": "Webhook Trigger",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [0, 0],
+      "position": [
+        0,
+        0
+      ],
       "webhookId": "wf-10-config"
     },
     {
       "parameters": {
         "language": "javascript",
-        "code": "const input = $json;\nconst now = new Date().toISOString();\n\ntry {\n  // Determine environment based on mode\n  const mode = input.mode || 'test';\n  const environment = mode === 'test' ? 'test' : (input.environment || 'production');\n  const scope = input.scope || 'global';\n  const channelId = input.channel_id || null;\n  const runtimeOverrides = input.runtime_overrides || {};\n\n  return [\n    {\n      json: {\n        run_id: input.run_id || null,\n        mode: mode,\n        video_type: input.video_type || 'normal',\n        category: input.category || null,\n        custom_topic: input.custom_topic || null,\n        language: input.language || 'en',\n        target_countries: input.target_countries || ['US', 'UK', 'CA', 'AU'],\n        video_length: input.video_length || {},\n        quality: input.quality || {},\n        options: input.options || {},\n        source_video_url: input.source_video_url || null,\n        environment: environment,\n        scope: scope,\n        channel_id: channelId,\n        runtime_overrides: runtimeOverrides,\n        original_input: input\n      }\n    }\n  ];\n} catch (error) {\n  return [\n    {\n      json: {\n        error: true,\n        error_message: error.message,\n        status: 'FAILED_CONFIG_INIT'\n      }\n    }\n  ];\n}"
+        "code": "const input = $json;\n\ntry {\n  const allowedEnvs = ['test', 'production'];\n  const rawEnv = (input.environment || (input.mode === 'test' ? 'test' : (input.mode ? 'production' : 'production'))).toString();\n  const environment = rawEnv.toLowerCase();\n  if (!allowedEnvs.includes(environment)) {\n    return [{\n      json: {\n        error: true,\n        error_message: `Invalid environment: ${input.environment}`,\n        status: 'INVALID_ENVIRONMENT'\n      }\n    }];\n  }\n\n  const mode = input.mode || (environment === 'test' ? 'test' : 'production');\n  const scope = input.scope || 'global';\n  const channelId = input.channel_id || null;\n  const runtimeOverrides = input.runtime_overrides || {};\n\n  return [\n    {\n      json: {\n        run_id: input.run_id || null,\n        mode: mode,\n        video_type: input.video_type || 'normal',\n        category: input.category || null,\n        custom_topic: input.custom_topic || null,\n        language: input.language || 'en',\n        target_countries: input.target_countries || ['US', 'UK', 'CA', 'AU'],\n        video_length: input.video_length || {},\n        quality: input.quality || {},\n        options: input.options || {},\n        source_video_url: input.source_video_url || null,\n        environment: environment,\n        scope: scope,\n        channel_id: channelId,\n        runtime_overrides: runtimeOverrides,\n        original_input: input\n      }\n    }\n  ];\n} catch (error) {\n  return [\n    {\n      json: {\n        error: true,\n        error_message: error.message,\n        status: 'FAILED_CONFIG_INIT'\n      }\n    }\n  ];\n}"
       },
       "id": "normalize",
       "name": "Normalize Input",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [260, 0]
+      "position": [
+        260,
+        0
+      ]
     },
     {
       "parameters": {
@@ -37,17 +43,34 @@
       "name": "Load Defaults",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [520, 0]
+      "position": [
+        520,
+        0
+      ]
     },
     {
       "parameters": {
         "operation": "select",
-        "schema": { "__rl": true, "mode": "list", "value": "public" },
-        "table": { "__rl": true, "mode": "list", "value": "yt_studio_config" },
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "yt_studio_config"
+        },
         "where": {
           "values": [
-            { "column": "environment", "value": "={{ $json.environment }}" },
-            { "column": "is_active", "value": "=true" }
+            {
+              "column": "environment",
+              "value": "={{ $json.environment }}"
+            },
+            {
+              "column": "is_active",
+              "value": "=true"
+            }
           ]
         },
         "combineFilters": "AND",
@@ -58,7 +81,10 @@
       "name": "Query Config DB",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [780, 0],
+      "position": [
+        780,
+        0
+      ],
       "credentials": {
         "postgres": {
           "id": "postgres_yt_studio",
@@ -70,13 +96,16 @@
     {
       "parameters": {
         "language": "javascript",
-        "code": "const input = $node['Load Defaults'].json;\nconst dbItems = $input.all();\nconst usedDb = Array.isArray(dbItems) && dbItems.length > 0 && !dbItems[0].json?.error;\n\nfunction setNested(obj, path, value) {\n  const parts = path.split('.');\n  let current = obj;\n  for (let i = 0; i < parts.length - 1; i++) {\n    const key = parts[i];\n    if (!current[key] || typeof current[key] !== 'object') {\n      current[key] = {};\n    }\n    current = current[key];\n  }\n  current[parts[parts.length - 1]] = value;\n}\n\nfunction parseValue(row) {\n  if (row.value_type === 'credential_ref') {\n    return { type: 'credential_ref', ref: row.credential_ref };\n  }\n  if (row.value_type === 'number') {\n    return Number(row.value);\n  }\n  if (row.value_type === 'boolean') {\n    return row.value === 'true' || row.value === true;\n  }\n  if (row.value_type === 'json') {\n    try {\n      return JSON.parse(row.value);\n    } catch (e) {\n      return row.value;\n    }\n  }\n  return row.value;\n}\n\nconst merged = JSON.parse(JSON.stringify(input.defaults));\n\nif (usedDb) {\n  for (const item of dbItems) {\n    const row = item.json;\n    if (!row || !row.key) continue;\n    if (row.scope !== 'global' && row.scope !== input.scope) continue;\n    const value = parseValue(row);\n    setNested(merged, row.key, value);\n  }\n}\n\nreturn [\n  {\n    json: {\n      ...input,\n      merged_config: merged,\n      config_from_db: usedDb,\n      db_records_count: usedDb ? dbItems.length : 0\n    }\n  }\n];"
+        "code": "const input = $node['Load Defaults'].json;\nconst dbItems = $input.all();\nconst usedDb = Array.isArray(dbItems) && dbItems.length > 0 && !dbItems[0].json?.error;\n\nfunction setNested(obj, path, value) {\n  const parts = path.split('.');\n  let current = obj;\n  for (let i = 0; i < parts.length - 1; i++) {\n    const key = parts[i];\n    if (!current[key] || typeof current[key] !== 'object') {\n      current[key] = {};\n    }\n    current = current[key];\n  }\n  current[parts[parts.length - 1]] = value;\n}\n\nfunction parseValue(row) {\n  const valueType = row.value_type || 'string';\n  if (valueType === 'credential_ref') {\n    return { type: 'credential_ref', ref: row.credential_ref || row.value };\n  }\n  if (valueType === 'env_ref') {\n    return { type: 'env_ref', ref: row.value };\n  }\n  if (valueType === 'number') {\n    return row.value === null ? null : Number(row.value);\n  }\n  if (valueType === 'boolean') {\n    return row.value === 'true' || row.value === true;\n  }\n  if (valueType === 'json') {\n    try {\n      return JSON.parse(row.value);\n    } catch (e) {\n      return row.value;\n    }\n  }\n  return row.value;\n}\n\nconst merged = JSON.parse(JSON.stringify(input.defaults));\n\nif (usedDb) {\n  for (const item of dbItems) {\n    const row = item.json;\n    if (!row || !row.key) continue;\n    if (row.scope !== 'global' && row.scope !== input.scope) continue;\n    const value = parseValue(row);\n    setNested(merged, row.key, value);\n  }\n}\n\nreturn [\n  {\n    json: {\n      ...input,\n      merged_config: merged,\n      config_from_db: usedDb,\n      db_records_count: usedDb ? dbItems.length : 0\n    }\n  }\n];"
       },
       "id": "merge",
       "name": "Merge DB Config",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1040, 0]
+      "position": [
+        1040,
+        0
+      ]
     },
     {
       "parameters": {
@@ -87,43 +116,101 @@
       "name": "Apply Overrides & Compute",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1300, 0]
+      "position": [
+        1300,
+        0
+      ]
     },
     {
       "parameters": {
         "language": "javascript",
-        "code": "const input = $json;\nconst now = new Date().toISOString();\nconst resolved = input.resolved_config || {};\nconst mode = input.mode || 'test';\nconst isTest = mode === 'test';\nconst storage = resolved.storage || {};\nconst provider = storage.provider || 'cloudinary';\nconst errors = [];\n\nif (provider === 'cloudinary') {\n  const cloud = storage.cloudinary || {};\n  if (!cloud.cloud_name) {\n    errors.push('storage.cloudinary.cloud_name is required');\n  }\n  const hasPreset = !!cloud.upload_preset;\n  if (!hasPreset) {\n    const apiKey = $env.CLOUDINARY_API_KEY || null;\n    const apiSecret = $env.CLOUDINARY_API_SECRET || null;\n    if (!apiKey || !apiSecret) {\n      errors.push('CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET are required for signed uploads');\n    }\n  }\n} else if (provider === 'generic_http') {\n  const endpoint = storage.generic_http?.upload_endpoint;\n  if (!endpoint) {\n    errors.push('storage.generic_http.upload_endpoint is required');\n  }\n} else if (provider === 's3') {\n  errors.push('storage.provider s3 is not configured');\n} else {\n  errors.push(`storage.provider ${provider} is not supported`);\n}\n\nconst storageValidation = {\n  provider: provider,\n  is_valid: errors.length === 0,\n  errors: errors,\n  is_test: isTest\n};\n\nif (!isTest && errors.length > 0) {\n  return [{\n    json: {\n      run_id: input.run_id,\n      mode: input.mode,\n      error: true,\n      error_message: 'Storage config invalid: ' + errors.join('; '),\n      status: 'FAILED_CONFIG_STORAGE',\n      storage_validation: storageValidation\n    }\n  }];\n}\n\n// Build clean response\nconst response = {\n  run_id: input.run_id,\n  mode: input.mode,\n  video_type: input.video_type,\n  category: input.category,\n  custom_topic: input.custom_topic,\n  language: input.language,\n  target_countries: input.target_countries,\n  video_length: input.video_length,\n  quality: input.quality,\n  options: input.options,\n  source_video_url: input.source_video_url,\n  environment: input.environment,\n  scope: input.scope,\n  channel_id: input.channel_id,\n  \n  // Resolved configuration\n  resolved_config: input.resolved_config,\n  \n  // Computed values for easy access\n  computed: input.computed,\n  \n  // Meta\n  config_source: input.config_source,\n  config_resolved_at: now,\n  schema_version: '2.0',\n  storage_validation: storageValidation,\n  status: 'CONFIG_RESOLVED'\n};\n\nif (isTest && errors.length > 0) {\n  response.warning = 'Storage config incomplete; uploads may be skipped in test mode.';\n}\n\nreturn [{ json: response }];"
+        "code": "const input = $json;\nconst now = new Date().toISOString();\nconst resolved = input.resolved_config || {};\nconst environment = input.environment || 'production';\nconst mode = input.mode || (environment === 'test' ? 'test' : 'production');\nconst isTest = environment === 'test';\nconst storage = resolved.storage || {};\nconst provider = storage.provider || 'cloudinary';\nconst errors = [];\n\nif (provider === 'cloudinary') {\n  const cloud = storage.cloudinary || {};\n  if (!cloud.cloud_name) {\n    errors.push('storage.cloudinary.cloud_name is required');\n  }\n  const hasPreset = !!cloud.upload_preset;\n  if (!hasPreset) {\n    const apiKey = $env.CLOUDINARY_API_KEY || null;\n    const apiSecret = $env.CLOUDINARY_API_SECRET || null;\n    if (!apiKey || !apiSecret) {\n      errors.push('CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET are required for signed uploads');\n    }\n  }\n} else if (provider === 'generic_http') {\n  const endpoint = storage.generic_http?.upload_endpoint;\n  if (!endpoint) {\n    errors.push('storage.generic_http.upload_endpoint is required');\n  }\n} else if (provider === 's3') {\n  errors.push('storage.provider s3 is not configured');\n} else {\n  errors.push(`storage.provider ${provider} is not supported`);\n}\n\nconst storageValidation = {\n  provider: provider,\n  is_valid: errors.length === 0,\n  errors: errors,\n  is_test: isTest\n};\n\nif (!isTest && errors.length > 0) {\n  return [{\n    json: {\n      run_id: input.run_id,\n      mode: mode,\n      environment: environment,\n      error: true,\n      error_message: 'Storage config invalid: ' + errors.join('; '),\n      status: 'FAILED_CONFIG_STORAGE',\n      storage_validation: storageValidation\n    }\n  }];\n}\n\n// Build clean response\nconst response = {\n  run_id: input.run_id,\n  mode: mode,\n  video_type: input.video_type,\n  category: input.category,\n  custom_topic: input.custom_topic,\n  language: input.language,\n  target_countries: input.target_countries,\n  video_length: input.video_length,\n  quality: input.quality,\n  options: input.options,\n  source_video_url: input.source_video_url,\n  environment: environment,\n  scope: input.scope,\n  channel_id: input.channel_id,\n\n  // Resolved configuration\n  resolved_config: input.resolved_config,\n\n  // Computed values for easy access\n  computed: input.computed,\n\n  // Meta\n  config_source: input.config_source,\n  resolved_at: now,\n  schema_version: '2.0',\n  storage_validation: storageValidation,\n  status: 'CONFIG_RESOLVED'\n};\n\nif (isTest && errors.length > 0) {\n  response.warning = 'Storage config incomplete; uploads may be skipped in test mode.';\n}\n\nreturn [{ json: response }];"
       },
       "id": "response",
       "name": "Build Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1560, 0]
+      "position": [
+        1560,
+        0
+      ]
     }
   ],
   "connections": {
     "Webhook Trigger": {
-      "main": [[{"node": "Normalize Input", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Normalize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Normalize Input": {
-      "main": [[{"node": "Load Defaults", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Load Defaults",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Load Defaults": {
-      "main": [[{"node": "Query Config DB", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Query Config DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Query Config DB": {
-      "main": [[{"node": "Merge DB Config", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Merge DB Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Merge DB Config": {
-      "main": [[{"node": "Apply Overrides & Compute", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Apply Overrides & Compute",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Apply Overrides & Compute": {
-      "main": [[{"node": "Build Response", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Build Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
-  "settings": { "executionOrder": "v1" },
+  "settings": {
+    "executionOrder": "v1"
+  },
   "versionId": "yt-studio-wf-10-v1",
-  "meta": { "templateCredsSetupCompleted": true },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
   "id": "wf-10"
 }
