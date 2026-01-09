@@ -18,7 +18,7 @@
     {
       "parameters": {
         "language": "javascript",
-        "code": "const input = $json;\nconst config = input.resolved_config || {};\nconst metadata = input.manifest?.metadata || {};\nconst isTest = input.mode === 'test';\n\n// Validate required fields\nconst renderUrl = input.manifest?.render_url;\nif (!renderUrl) {\n  return [{\n    json: {\n      ...input,\n      error: true,\n      error_message: 'No render URL available for publishing',\n      status: 'FAILED'\n    }\n  }];\n}\n\n// Build video metadata\nconst title = metadata.title || input.selected_topic || 'Untitled Video';\nconst description = metadata.description || '';\nconst tags = metadata.tags || [];\nconst categoryId = metadata.category_id || '22'; // People & Blogs\n\n// Determine privacy status\n// Test mode = private, Production = public or scheduled\nlet privacyStatus = 'private';\nlet publishAt = null;\n\nif (!isTest && input.options?.best_time_publish) {\n  // Calculate best publish time (e.g., next day at optimal hour)\n  const optimalHour = config.publishing?.optimal_hour || 14; // 2 PM\n  const publishDate = new Date();\n  publishDate.setDate(publishDate.getDate() + 1);\n  publishDate.setHours(optimalHour, 0, 0, 0);\n  privacyStatus = 'private';\n  publishAt = publishDate.toISOString();\n} else if (!isTest) {\n  privacyStatus = 'public';\n}\n\n// Build YouTube API request\nconst youtubeMetadata = {\n  snippet: {\n    title: title.substring(0, 100),\n    description: description.substring(0, 5000),\n    tags: tags.slice(0, 500),\n    categoryId: categoryId,\n    defaultLanguage: input.language || 'en',\n    defaultAudioLanguage: input.language || 'en'\n  },\n  status: {\n    privacyStatus: privacyStatus,\n    selfDeclaredMadeForKids: false,\n    publishAt: publishAt\n  }\n};\n\nreturn [{\n  json: {\n    ...input,\n    youtube_metadata: youtubeMetadata,\n    render_url: renderUrl,\n    thumbnail_url: input.manifest?.thumbnail_url,\n    is_test: isTest,\n    privacy_status: privacyStatus,\n    scheduled_publish: publishAt\n  }\n}];"
+        "code": "const input = $json;\nconst config = input.resolved_config || {};\nconst metadata = input.manifest?.metadata || input.manifest?.publish || {};\nconst isTest = input.mode === 'test';\n\n// FIXED: Use fallback chain for render_url\nconst renderUrl = input.render_url || input.manifest?.render?.render_url || input.manifest?.render_url;\nif (!renderUrl) {\n  return [{\n    json: {\n      ...input,\n      error: true,\n      error_message: 'No render URL available for publishing',\n      status: 'FAILED'\n    }\n  }];\n}\n\n// Build video metadata - check multiple possible locations\nconst title = metadata.title || input.manifest?.publish?.title || input.selected_topic || 'Untitled Video';\nconst description = metadata.description || input.manifest?.publish?.description || '';\nconst tags = metadata.tags || input.manifest?.publish?.tags || [];\nconst categoryId = metadata.category_id || '22';\n\n// Determine privacy status\nlet privacyStatus = 'private';\nlet publishAt = null;\n\nif (!isTest && input.options?.best_time_publish) {\n  const optimalHour = config.publishing?.optimal_hour || 14;\n  const publishDate = new Date();\n  publishDate.setDate(publishDate.getDate() + 1);\n  publishDate.setHours(optimalHour, 0, 0, 0);\n  privacyStatus = 'private';\n  publishAt = publishDate.toISOString();\n} else if (!isTest) {\n  privacyStatus = 'public';\n}\n\n// FIXED: Get thumbnail URL from multiple possible locations\nconst thumbnailUrl = input.thumbnail_url || input.manifest?.thumbnail?.url || input.manifest?.thumbnail_url;\n\nconst youtubeMetadata = {\n  snippet: {\n    title: title.substring(0, 100),\n    description: description.substring(0, 5000),\n    tags: tags.slice(0, 500),\n    categoryId: categoryId,\n    defaultLanguage: input.language || 'en',\n    defaultAudioLanguage: input.language || 'en'\n  },\n  status: {\n    privacyStatus: privacyStatus,\n    selfDeclaredMadeForKids: false,\n    publishAt: publishAt\n  }\n};\n\nreturn [{\n  json: {\n    ...input,\n    youtube_metadata: youtubeMetadata,\n    render_url: renderUrl,\n    thumbnail_url: thumbnailUrl,\n    is_test: isTest,\n    privacy_status: privacyStatus,\n    scheduled_publish: publishAt\n  }\n}];"
       },
       "id": "prepare",
       "name": "Prepare Upload Metadata",
@@ -46,7 +46,7 @@
     {
       "parameters": {
         "language": "javascript",
-        "code": "const input = $json;\nconst now = new Date().toISOString();\n\n// In test mode, skip actual upload\nreturn [{\n  json: {\n    run_id: input.run_id,\n    mode: input.mode,\n    youtube_video_id: null,\n    youtube_url: null,\n    render_url: input.render_url,\n    thumbnail_url: input.thumbnail_url,\n    status: 'TEST_COMPLETE',\n    test_result: {\n      would_upload: true,\n      title: input.youtube_metadata.snippet.title,\n      description_length: input.youtube_metadata.snippet.description.length,\n      tags_count: input.youtube_metadata.snippet.tags.length,\n      privacy: input.privacy_status,\n      scheduled: input.scheduled_publish\n    },\n    completed_at: now\n  }\n}];"
+        "code": "const input = $json;\nconst now = new Date().toISOString();\n\nreturn [{\n  json: {\n    run_id: input.run_id,\n    mode: input.mode,\n    youtube_video_id: null,\n    youtube_url: null,\n    render_url: input.render_url,\n    thumbnail_url: input.thumbnail_url,\n    status: 'TEST_COMPLETE',\n    test_result: {\n      would_upload: true,\n      title: input.youtube_metadata.snippet.title,\n      description_length: input.youtube_metadata.snippet.description.length,\n      tags_count: input.youtube_metadata.snippet.tags.length,\n      privacy: input.privacy_status,\n      scheduled: input.scheduled_publish\n    },\n    completed_at: now\n  }\n}];"
       },
       "id": "test_response",
       "name": "Test Mode Response",
@@ -137,18 +137,44 @@
     },
     {
       "parameters": {
-        "resource": "video",
-        "operation": "update",
-        "videoId": "={{$json.youtube_video_id}}",
-        "updateFields": {}
+        "method": "GET",
+        "url": "={{$json.thumbnail_url}}",
+        "options": {
+          "timeout": 60000,
+          "response": { "response": { "responseFormat": "file" } }
+        }
       },
-      "id": "set_thumbnail",
-      "name": "Set Thumbnail",
-      "type": "n8n-nodes-base.youTube",
-      "typeVersion": 1,
+      "id": "download_thumbnail",
+      "name": "Download Thumbnail",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
       "position": [1820, 0],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId={{$node['Process Upload Result'].json.youtube_video_id}}&uploadType=media",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "image/png" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "options": { "timeout": 60000 }
+      },
+      "id": "set_thumbnail_api",
+      "name": "Set Thumbnail via API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2080, 0],
       "credentials": {
-        "youTubeOAuth2Api": {
+        "oAuth2Api": {
           "id": "youtube_oauth2",
           "name": "YouTube OAuth2"
         }
@@ -158,18 +184,18 @@
     {
       "parameters": {
         "language": "javascript",
-        "code": "const input = $json;\nconst now = new Date().toISOString();\n\n// Final response - with or without thumbnail\nreturn [{\n  json: {\n    run_id: input.run_id,\n    mode: input.mode,\n    youtube_video_id: input.youtube_video_id,\n    youtube_url: input.youtube_url,\n    privacy_status: input.privacy_status,\n    scheduled_publish: input.scheduled_publish,\n    thumbnail_set: true,\n    completed_at: now,\n    status: 'PUBLISHED'\n  }\n}];"
+        "code": "const input = $node['Process Upload Result'].json;\nconst thumbResult = $json;\nconst now = new Date().toISOString();\n\nconst thumbnailSet = !thumbResult.error && (thumbResult.items || thumbResult.kind);\n\nreturn [{\n  json: {\n    run_id: input.run_id,\n    mode: input.mode,\n    youtube_video_id: input.youtube_video_id,\n    youtube_url: input.youtube_url,\n    privacy_status: input.privacy_status,\n    scheduled_publish: input.scheduled_publish,\n    thumbnail_set: thumbnailSet,\n    completed_at: now,\n    status: 'PUBLISHED'\n  }\n}];"
       },
       "id": "final_with_thumb",
       "name": "Final Response (with Thumbnail)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2080, 0]
+      "position": [2340, 0]
     },
     {
       "parameters": {
         "language": "javascript",
-        "code": "const input = $json;\nconst now = new Date().toISOString();\n\n// Final response without thumbnail\nreturn [{\n  json: {\n    run_id: input.run_id,\n    mode: input.mode,\n    youtube_video_id: input.youtube_video_id,\n    youtube_url: input.youtube_url,\n    privacy_status: input.privacy_status,\n    scheduled_publish: input.scheduled_publish,\n    thumbnail_set: false,\n    completed_at: now,\n    status: input.error ? 'FAILED' : 'PUBLISHED'\n  }\n}];"
+        "code": "const input = $json;\nconst now = new Date().toISOString();\n\nreturn [{\n  json: {\n    run_id: input.run_id,\n    mode: input.mode,\n    youtube_video_id: input.youtube_video_id,\n    youtube_url: input.youtube_url,\n    privacy_status: input.privacy_status,\n    scheduled_publish: input.scheduled_publish,\n    thumbnail_set: false,\n    completed_at: now,\n    status: input.error ? 'FAILED' : 'PUBLISHED'\n  }\n}];"
       },
       "id": "final_no_thumb",
       "name": "Final Response (no Thumbnail)",
@@ -192,15 +218,16 @@
     "Process Upload Result": { "main": [[{"node": "Should Upload Thumbnail?", "type": "main", "index": 0}]] },
     "Should Upload Thumbnail?": {
       "main": [
-        [{"node": "Set Thumbnail", "type": "main", "index": 0}],
+        [{"node": "Download Thumbnail", "type": "main", "index": 0}],
         [{"node": "Final Response (no Thumbnail)", "type": "main", "index": 0}]
       ]
     },
-    "Set Thumbnail": { "main": [[{"node": "Final Response (with Thumbnail)", "type": "main", "index": 0}]] }
+    "Download Thumbnail": { "main": [[{"node": "Set Thumbnail via API", "type": "main", "index": 0}]] },
+    "Set Thumbnail via API": { "main": [[{"node": "Final Response (with Thumbnail)", "type": "main", "index": 0}]] }
   },
   "active": false,
   "settings": { "executionOrder": "v1" },
-  "versionId": "yt-studio-wf-09-v1",
+  "versionId": "yt-studio-wf-09-v2",
   "meta": { "templateCredsSetupCompleted": true },
   "id": "wf-09"
 }

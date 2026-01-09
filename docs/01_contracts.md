@@ -11,7 +11,7 @@
 
 **Sahələr:**
 - `run_id` (string, required): Global unikal run identifikatoru.
-- `mode` (string, required): İşləmə rejimi. Dəyərlər: `dry_run`, `staging`, `production`.
+- `mode` (string, required): İşləmə rejimi. Dəyərlər: `test`, `auto_trend`, `manual`.
 - `scene_assets` (array, required): Səhnə asset-lərinin siyahısı.
 - `voiceover_url_signed` (string, nullable): İmzalanmış voiceover URL-i.
 - `render_id` (string, nullable): Render sistemində yaradılmış render ID.
@@ -55,7 +55,7 @@ Manifest strukturu `docs/06_manifest_spec.md` sənədində dəqiq təyin edilib.
     },
     "mode": {
       "type": "string",
-      "enum": ["dry_run", "staging", "production"],
+      "enum": ["test", "auto_trend", "manual"],
       "description": "İşləmə rejimi"
     },
     "scene_assets": {
