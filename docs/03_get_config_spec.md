@@ -25,10 +25,17 @@ WF-10 çıxışı aşağıdakı formatdadır (bütün workflow-lara eyni):
       }
     },
     "storage": {
-      "base_url": "https://storage.example.com",
-      "signing_key": {
-        "type": "credential_ref",
-        "ref": "cred_storage_signing"
+      "provider": "cloudinary",
+      "base_url": "https://cdn.example.com",
+      "cloudinary": {
+        "cloud_name": "demo",
+        "upload_preset": "ytb_unsigned",
+        "api_key_ref": { "type": "env", "ref": "CLOUDINARY_API_KEY" },
+        "api_secret_ref": { "type": "env", "ref": "CLOUDINARY_API_SECRET" }
+      },
+      "generic_http": {
+        "upload_endpoint": "https://my-uploader/upload",
+        "auth_header_ref": { "type": "env", "ref": "STORAGE_AUTH_HEADER" }
       }
     },
     "tts": {
@@ -50,13 +57,13 @@ WF-10 çıxışı aşağıdakı formatdadır (bütün workflow-lara eyni):
     }
   },
   "resolved_at": "2025-01-10T12:00:00Z",
-  "schema_version": "1.0"
+  "schema_version": "2.0"
 }
 ```
 
 ## Error handling
 - Config DB bağlantısı uğursuz olarsa `config_unavailable` statusu qaytarılır.
-- Əgər required key-lər yoxdursa `config_incomplete` statusu qaytarılır.
+- Production modda storage config əskikdirsə `FAILED_CONFIG_STORAGE` qaytarılır.
 - Credential provider unreachable olduqda WF-10 yalnız `credential_ref` qaytarır və warning log yazır.
 
 ## Integration qaydaları

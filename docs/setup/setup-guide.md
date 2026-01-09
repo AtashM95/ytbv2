@@ -61,6 +61,16 @@ DATABASE_URL=postgresql://user:pass@host:5432/dbname
 
 # n8n Base URL (for inter-workflow calls)
 N8N_BASE_URL=http://localhost:5678
+
+# Storage
+STORAGE_PROVIDER=cloudinary
+STORAGE_BASE_URL=
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_UPLOAD_PRESET=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+STORAGE_UPLOAD_ENDPOINT=
+STORAGE_AUTH_HEADER=
 ```
 
 ### Step 3: Import Workflows
