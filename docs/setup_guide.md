@@ -1,53 +1,106 @@
-# YouTube Helal Otomasyon Sistemi v2 - Qurulum Təlimatı
+# YouTube Helal Otomasyon Sistemi v2 - Quraşdırma Bələdçisi
 
-## Ümumi Baxış
+Bu sənəd sistemin tam qurulması üçün lazım olan bütün addımları izah edir.
 
-Bu sənəd YouTube Helal Otomasyon Sistemi v2-nin tam qurulmasını əhatə edir. Sistem 10 n8n workflow-dan ibarətdir və aşağıdakı xidmətlərlə inteqrasiya olunur:
+## İcmal
 
-- **OpenAI** (GPT-4o-mini, DALL-E 3)
-- **ElevenLabs** (Text-to-Speech)
-- **Shotstack** (Video Render)
-- **YouTube Data API v3** (Video Upload)
-- **PostgreSQL** (Konfiqurasiya saxlama)
+Sistem 10 n8n workflow-dan ibarətdir:
+- **WF-01**: Orchestrator - bütün pipeline-ı idarə edir
+- **WF-02**: Research & Source Intake - mənbə araşdırması
+- **WF-03**: Script Draft - OpenAI ilə ssenari yaradılması
+- **WF-04**: Script Review & Approval - ssenarinin təsdiqi
+- **WF-05**: Voiceover Generation - ElevenLabs ilə səsləndirmə
+- **WF-06**: Scene Asset Build - Pexels/DALL-E ilə vizual asset-lər
+- **WF-07**: Render Orchestration - Shotstack ilə video render
+- **WF-08**: YouTube Publish - YouTube-a yükləmə
+- **WF-09**: Settings Panel - konfiqurasiya UI
+- **WF-10**: Get Config - konfiqurasiya oxuma
 
----
+## 1. Tələb Olunan API Key-lər
 
-## 1. Ön Tələblər
+### 1.1 OpenAI API Key
+**İstifadə olunur**: WF-03 (ssenari), WF-06 (DALL-E fallback)
 
-### 1.1 n8n Qurulumu
+1. https://platform.openai.com/api-keys səhifəsinə daxil olun
+2. "Create new secret key" düyməsini vurun
+3. Key-i qeyd edin
+
 ```bash
-# Docker ilə n8n qurulumu
-docker run -d \
-  --name n8n \
-  -p 5678:5678 \
-  -e N8N_BASIC_AUTH_ACTIVE=true \
-  -e N8N_BASIC_AUTH_USER=admin \
-  -e N8N_BASIC_AUTH_PASSWORD=your_password \
-  -v n8n_data:/home/node/.n8n \
-  n8nio/n8n
+export OPENAI_API_KEY="sk-..."
 ```
 
-### 1.2 PostgreSQL Qurulumu
+### 1.2 ElevenLabs API Key
+**İstifadə olunur**: WF-05 (voiceover)
+
+1. https://elevenlabs.io səhifəsinə daxil olun
+2. Profile → API Keys bölməsinə gedin
+3. "Create API Key" düyməsini vurun
+
 ```bash
-# Docker ilə PostgreSQL
-docker run -d \
-  --name postgres_ytb \
-  -p 5432:5432 \
-  -e POSTGRES_USER=ytb_user \
-  -e POSTGRES_PASSWORD=your_secure_password \
-  -e POSTGRES_DB=ytb_automation \
-  -v postgres_data:/var/lib/postgresql/data \
-  postgres:15
+export ELEVENLABS_API_KEY="..."
 ```
 
----
+**Tövsiyə edilən Voice ID-lər:**
+- `pNInz6obpgDQGcFmaJgB` - Adam (multilingual)
+- `21m00Tcm4TlvDq8ikWAM` - Rachel (English)
 
-## 2. PostgreSQL Database Schema
+### 1.3 Pexels API Key
+**İstifadə olunur**: WF-06 (video və şəkil axtarışı)
 
-Aşağıdakı SQL-i PostgreSQL-də icra edin:
+1. https://www.pexels.com/api/ səhifəsinə daxil olun
+2. Qeydiyyatdan keçin
+3. API key-i alın
+
+```bash
+export PEXELS_API_KEY="..."
+```
+
+### 1.4 Shotstack API Key
+**İstifadə olunur**: WF-07 (video render)
+
+1. https://dashboard.shotstack.io/ səhifəsinə daxil olun
+2. Qeydiyyatdan keçin
+3. Settings → API Keys bölməsindən key-i götürün
+
+```bash
+export SHOTSTACK_API_KEY="..."
+export SHOTSTACK_ENDPOINT="https://api.shotstack.io/stage"  # və ya /v1 production üçün
+```
+
+### 1.5 YouTube OAuth2 Credentials
+**İstifadə olunur**: WF-08 (video yükləmə)
+
+1. Google Cloud Console-a daxil olun: https://console.cloud.google.com
+2. Yeni layihə yaradın
+3. YouTube Data API v3-ü aktivləşdirin
+4. OAuth 2.0 credentials yaradın
+5. Consent screen-i konfiqurasiya edin
+6. Refresh token əldə edin
+
+```bash
+export YOUTUBE_CLIENT_ID="..."
+export YOUTUBE_CLIENT_SECRET="..."
+export YOUTUBE_REFRESH_TOKEN="..."
+```
+
+**Refresh Token Almaq üçün:**
+```bash
+# OAuth2 playground istifadə edin:
+# https://developers.google.com/oauthplayground
+# Scope: https://www.googleapis.com/auth/youtube.upload
+```
+
+## 2. PostgreSQL Database Setup
+
+### 2.1 Database Yaradılması
 
 ```sql
--- Settings table for WF-09 and WF-10
+CREATE DATABASE ytb_automation;
+```
+
+### 2.2 Settings Table Schema
+
+```sql
 CREATE TABLE IF NOT EXISTS ytb_settings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     key VARCHAR(255) NOT NULL,
@@ -58,80 +111,122 @@ CREATE TABLE IF NOT EXISTS ytb_settings (
     environment VARCHAR(50) NOT NULL DEFAULT 'staging',
     notes TEXT,
     is_active BOOLEAN NOT NULL DEFAULT true,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_by VARCHAR(100) DEFAULT 'system',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_by VARCHAR(100),
+    
     CONSTRAINT unique_key_env_scope UNIQUE (key, environment, scope)
 );
 
--- Index for faster queries
-CREATE INDEX idx_ytb_settings_env_active
-ON ytb_settings (environment, is_active);
+-- İndekslər
+CREATE INDEX idx_settings_env ON ytb_settings(environment);
+CREATE INDEX idx_settings_scope ON ytb_settings(scope);
+CREATE INDEX idx_settings_active ON ytb_settings(is_active);
+CREATE INDEX idx_settings_key ON ytb_settings(key);
 
-CREATE INDEX idx_ytb_settings_scope
-ON ytb_settings (scope);
+-- Updated_at trigger
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
 
--- Optional: Runs history table
-CREATE TABLE IF NOT EXISTS ytb_runs (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    run_id VARCHAR(255) UNIQUE NOT NULL,
-    mode VARCHAR(50) NOT NULL,
-    environment VARCHAR(50) NOT NULL,
-    status VARCHAR(100) NOT NULL,
-    manifest JSONB,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    completed_at TIMESTAMP WITH TIME ZONE
-);
-
-CREATE INDEX idx_ytb_runs_status ON ytb_runs (status);
-CREATE INDEX idx_ytb_runs_created ON ytb_runs (created_at DESC);
-
--- Insert default settings
-INSERT INTO ytb_settings (key, value, value_type, scope, environment, notes, is_active)
-VALUES
-    ('branding.channel_name', 'Helal Elm', 'string', 'global', 'production', 'Default channel name', true),
-    ('branding.default_tags', '["elm", "maarif", "azərbaycanca"]', 'json', 'global', 'production', 'Default video tags', true),
-    ('runtime.publish_off', 'false', 'boolean', 'global', 'production', 'Enable publishing in production', true),
-    ('runtime.publish_off', 'true', 'boolean', 'global', 'staging', 'Disable publishing in staging', true),
-    ('publish.privacy_default', 'unlisted', 'string', 'global', 'staging', 'Default privacy for staging', true),
-    ('publish.privacy_default', 'public', 'string', 'global', 'production', 'Default privacy for production', true)
-ON CONFLICT (key, environment, scope) DO NOTHING;
+CREATE TRIGGER update_ytb_settings_updated_at
+    BEFORE UPDATE ON ytb_settings
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
 ```
 
----
+### 2.3 İlkin Konfiqurasiya Məlumatları
 
-## 3. n8n Credentials Qurulumu
+```sql
+-- OpenAI konfiqurasiyası
+INSERT INTO ytb_settings (key, value, value_type, scope, environment) 
+VALUES ('openai.model', 'gpt-4o-mini', 'string', 'global', 'production');
+
+INSERT INTO ytb_settings (key, value, value_type, scope, environment) 
+VALUES ('openai.max_tokens', '2000', 'number', 'global', 'production');
+
+-- TTS konfiqurasiyası
+INSERT INTO ytb_settings (key, value, value_type, scope, environment) 
+VALUES ('tts.model', 'eleven_multilingual_v2', 'string', 'global', 'production');
+
+INSERT INTO ytb_settings (key, value, value_type, scope, environment) 
+VALUES ('tts.default_voice_id', 'pNInz6obpgDQGcFmaJgB', 'string', 'global', 'production');
+
+-- Render konfiqurasiyası
+INSERT INTO ytb_settings (key, value, value_type, scope, environment) 
+VALUES ('render.endpoint', 'https://api.shotstack.io/stage', 'string', 'global', 'staging');
+
+INSERT INTO ytb_settings (key, value, value_type, scope, environment) 
+VALUES ('render.endpoint', 'https://api.shotstack.io/v1', 'string', 'global', 'production');
+
+-- Publish konfiqurasiyası
+INSERT INTO ytb_settings (key, value, value_type, scope, environment) 
+VALUES ('publish.publish_enabled', 'false', 'boolean', 'global', 'staging');
+
+INSERT INTO ytb_settings (key, value, value_type, scope, environment) 
+VALUES ('publish.publish_enabled', 'true', 'boolean', 'global', 'production');
+
+INSERT INTO ytb_settings (key, value, value_type, scope, environment) 
+VALUES ('publish.privacy_default', 'unlisted', 'string', 'global', 'production');
+
+-- Branding
+INSERT INTO ytb_settings (key, value, value_type, scope, environment) 
+VALUES ('branding.channel_name', 'Helal Elm', 'string', 'global', 'production');
+
+INSERT INTO ytb_settings (key, value, value_type, scope, environment) 
+VALUES ('branding.default_tags', '["elm", "maarif", "azərbaycanca"]', 'json', 'global', 'production');
+```
+
+## 3. n8n Credential Setup
 
 ### 3.1 PostgreSQL Credential
 
-1. n8n-də **Settings > Credentials** bölməsinə keçin
-2. **Add Credential > PostgreSQL** seçin
-3. Aşağıdakı məlumatları daxil edin:
+1. n8n-də Credentials → Add Credential
+2. "Postgres" seçin
+3. Konfiqurasiya:
+   - **Name**: `PostgreSQL YTB`
+   - **Host**: `your-db-host`
+   - **Database**: `ytb_automation`
+   - **User**: `your-user`
+   - **Password**: `your-password`
+   - **Port**: `5432`
+   - **SSL**: Production üçün aktivləşdirin
 
-| Sahə | Dəyər |
-|------|-------|
-| Name | `PostgreSQL YTB` |
-| Host | `localhost` (və ya PostgreSQL server IP) |
-| Port | `5432` |
-| Database | `ytb_automation` |
-| User | `ytb_user` |
-| Password | `your_secure_password` |
-| SSL | Disable (lokal üçün) |
+### 3.2 Environment Variables (n8n)
 
-**Vacib**: Credential ID-ni `postgres_ytb` olaraq saxlayın və ya workflow-larda credential reference-ı yeniləyin.
+n8n-in `.env` faylına və ya docker-compose-a əlavə edin:
 
-### 3.2 HTTP Header Auth (OpenAI, ElevenLabs)
+```env
+# n8n Base URL
+N8N_BASE_URL=http://localhost:5678
 
-Bu workflow-lar environment variable-lardan API key alır, lakin istəsəniz n8n credential-larından da istifadə edə bilərsiniz.
+# OpenAI
+OPENAI_API_KEY=sk-...
 
----
+# ElevenLabs
+ELEVENLABS_API_KEY=...
 
-## 4. Environment Variables
+# Pexels
+PEXELS_API_KEY=...
 
-n8n üçün aşağıdakı environment variable-ları quraşdırın:
+# Shotstack
+SHOTSTACK_API_KEY=...
+SHOTSTACK_ENDPOINT=https://api.shotstack.io/stage
 
-### 4.1 Docker Compose nümunəsi
+# YouTube OAuth2
+YOUTUBE_CLIENT_ID=...
+YOUTUBE_CLIENT_SECRET=...
+YOUTUBE_REFRESH_TOKEN=...
+
+# Storage (optional)
+STORAGE_BASE_URL=https://storage.example.com
+```
+
+### 3.3 Docker Compose Nümunəsi
 
 ```yaml
 version: '3.8'
@@ -141,196 +236,121 @@ services:
     ports:
       - "5678:5678"
     environment:
-      # n8n Config
-      - N8N_BASIC_AUTH_ACTIVE=true
-      - N8N_BASIC_AUTH_USER=admin
-      - N8N_BASIC_AUTH_PASSWORD=your_password
-      - WEBHOOK_URL=https://your-domain.com
-
-      # Custom Environment Variables
-      - N8N_BASE_URL=https://your-n8n-domain.com
-      - STORAGE_BASE_URL=https://your-storage.com
-
-      # API Keys
-      - OPENAI_API_KEY=sk-your-openai-api-key
-      - ELEVENLABS_API_KEY=your-elevenlabs-api-key
-      - SHOTSTACK_API_KEY=your-shotstack-api-key
-
-      # Shotstack Endpoint (stage or v1 for production)
-      - SHOTSTACK_ENDPOINT=https://api.shotstack.io/stage
-
-      # YouTube OAuth2
-      - YOUTUBE_CLIENT_ID=your-google-client-id
-      - YOUTUBE_CLIENT_SECRET=your-google-client-secret
-      - YOUTUBE_REFRESH_TOKEN=your-refresh-token
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - N8N_BASE_URL=http://localhost:5678
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}
+      - PEXELS_API_KEY=${PEXELS_API_KEY}
+      - SHOTSTACK_API_KEY=${SHOTSTACK_API_KEY}
+      - SHOTSTACK_ENDPOINT=${SHOTSTACK_ENDPOINT}
+      - YOUTUBE_CLIENT_ID=${YOUTUBE_CLIENT_ID}
+      - YOUTUBE_CLIENT_SECRET=${YOUTUBE_CLIENT_SECRET}
+      - YOUTUBE_REFRESH_TOKEN=${YOUTUBE_REFRESH_TOKEN}
     volumes:
       - n8n_data:/home/node/.n8n
+
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_USER=ytb_user
+      - POSTGRES_PASSWORD=ytb_password
+      - POSTGRES_DB=ytb_automation
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  n8n_data:
+  postgres_data:
 ```
 
-### 4.2 Lazım olan API Key-lər
+## 4. Workflow Import
 
-| Service | Environment Variable | Necə Almaq |
-|---------|---------------------|------------|
-| OpenAI | `OPENAI_API_KEY` | https://platform.openai.com/api-keys |
-| ElevenLabs | `ELEVENLABS_API_KEY` | https://elevenlabs.io/app/settings/api-keys |
-| Shotstack | `SHOTSTACK_API_KEY` | https://dashboard.shotstack.io/api-keys |
-| YouTube | `YOUTUBE_CLIENT_ID` | Google Cloud Console |
-| YouTube | `YOUTUBE_CLIENT_SECRET` | Google Cloud Console |
-| YouTube | `YOUTUBE_REFRESH_TOKEN` | OAuth2 flow ilə alınır |
+### 4.1 Workflow-ları Import Etmək
 
----
+1. n8n-ə daxil olun
+2. Workflows → Import from File
+3. Hər WF-XX.json faylını import edin
+4. Credential-ları bağlayın (WF-09, WF-10 üçün PostgreSQL)
 
-## 5. YouTube OAuth2 Qurulumu
+### 4.2 Workflow-ları Aktivləşdirmək
 
-### 5.1 Google Cloud Console
+Aşağıdakı sırayla aktivləşdirin:
+1. WF-10 (Get Config)
+2. WF-09 (Settings Panel)
+3. WF-02 - WF-08
+4. WF-01 (Orchestrator)
 
-1. https://console.cloud.google.com/ açın
-2. Yeni layihə yaradın və ya mövcud layihəni seçin
-3. **APIs & Services > Library** bölməsində "YouTube Data API v3" aktivləşdirin
-4. **APIs & Services > Credentials** bölməsində:
-   - **Create Credentials > OAuth 2.0 Client ID** seçin
-   - Application type: **Web application**
-   - Authorized redirect URIs: `https://your-n8n-domain.com/rest/oauth2-credential/callback`
+## 5. Test Etmək
 
-### 5.2 Refresh Token Almaq
-
-OAuth2 Playground istifadə edərək:
-
-1. https://developers.google.com/oauthplayground/ açın
-2. Settings (dişli icon) > "Use your own OAuth credentials" seçin
-3. Client ID və Client Secret daxil edin
-4. Step 1-də "YouTube Data API v3" scope-larını seçin:
-   - `https://www.googleapis.com/auth/youtube.upload`
-   - `https://www.googleapis.com/auth/youtube`
-5. Authorize edin və refresh token alın
-
----
-
-## 6. Workflow Import
-
-### 6.1 Import Prosesi
-
-1. n8n-də **Workflows** bölməsinə keçin
-2. **Add Workflow > Import from File** seçin
-3. Aşağıdakı faylları sıra ilə import edin:
-   - `WF-10.json` (ilk öncə - digərləri buna müraciət edir)
-   - `WF-09.json`
-   - `WF-02.json` ... `WF-08.json`
-   - `WF-01.json` (son - orchestrator)
-
-### 6.2 Credential Bağlantısı
-
-Import sonrası hər workflow-da PostgreSQL node-larını yoxlayın və credential-ı seçin.
-
-### 6.3 Workflow Aktivləşdirmə
-
-Bütün workflow-ları aktivləşdirin ki, webhook-lar işləsin:
-1. Hər workflow-u açın
-2. Sağ üst küncdə "Inactive" toggle-ı "Active" edin
-
----
-
-## 7. Test Çalışdırma
-
-### 7.1 Dry Run Test
+### 5.1 Dry Run Test
 
 ```bash
-curl -X POST https://your-n8n-domain.com/webhook/wf-01 \
+curl -X POST http://localhost:5678/webhook/wf-01 \
   -H "Content-Type: application/json" \
   -d '{
+    "title": "Test Video",
+    "category": "education",
+    "language": "az",
+    "keywords_raw": "test, elm, maarif",
+    "summary": "Bu test videosudur",
     "mode": "dry_run",
-    "environment": "staging",
-    "title": "Su Dövranı",
-    "category": "education",
-    "language": "az",
-    "keywords_raw": "su, dövran, təbiət",
-    "summary": "Su dövranının əsas mərhələləri haqqında qısa izah"
+    "environment": "staging"
   }'
 ```
 
-### 7.2 Staging Test (API çağırışları ilə)
+### 5.2 Production Run
 
 ```bash
-curl -X POST https://your-n8n-domain.com/webhook/wf-01 \
+curl -X POST http://localhost:5678/webhook/wf-01 \
   -H "Content-Type: application/json" \
   -d '{
-    "mode": "staging",
-    "environment": "staging",
-    "title": "Günəş Sistemi",
+    "title": "Günəş Sistemi haqqında",
     "category": "education",
     "language": "az",
-    "keywords_raw": "günəş, planet, kosmos",
-    "summary": "Günəş sistemi haqqında maarifləndirici məlumat"
-  }'
-```
-
-### 7.3 Production (YouTube upload ilə)
-
-```bash
-curl -X POST https://your-n8n-domain.com/webhook/wf-01 \
-  -H "Content-Type: application/json" \
-  -d '{
+    "keywords_raw": "günəş, planet, astronomiya",
+    "summary": "Günəş sistemi və planetlər haqqında maarifləndirici video",
     "mode": "production",
     "environment": "production",
-    "title": "Quran Möcüzələri",
-    "category": "education",
-    "language": "az",
-    "keywords_raw": "quran, islam, möcüzə",
-    "summary": "Quranda olan elmi möcüzələr haqqında",
-    "channel_id": "UC_YOUR_CHANNEL_ID"
+    "channel_id": "UC..."
   }'
 ```
 
----
+## 6. Troubleshooting
 
-## 8. Xəta Aradan Qaldırma
-
-### 8.1 Ümumi Xətalar
+### 6.1 Ümumi Xətalar
 
 | Xəta | Səbəb | Həll |
 |------|-------|------|
-| `OPENAI_API_KEY not configured` | API key yoxdur | Environment variable yoxlayın |
-| `ELEVENLABS_API_KEY not configured` | API key yoxdur | Environment variable yoxlayın |
-| `PostgreSQL connection failed` | DB əlçatan deyil | Host/port/credentials yoxlayın |
-| `YouTube OAuth2 failed` | Token etibarsız | Refresh token yeniləyin |
-| `Shotstack render failed` | API key və ya assets problemi | Asset URL-lərini yoxlayın |
+| `OPENAI_API_KEY not configured` | API key yoxdur | Env variable-ı yoxlayın |
+| `ELEVENLABS_API_KEY not configured` | API key yoxdur | Env variable-ı yoxlayın |
+| `PEXELS_API_KEY not configured` | API key yoxdur | Env variable-ı yoxlayın |
+| `PostgreSQL connection failed` | DB əlaqəsi yoxdur | Credential-ı yoxlayın |
+| `Render timeout` | Shotstack gecikmə | Timeout artırın |
 
-### 8.2 Log Yoxlama
+### 6.2 Log Yoxlama
 
-```bash
-# n8n logs
-docker logs n8n -f
+n8n-də Executions bölməsindən hər workflow icrasını yoxlaya bilərsiniz. Hər workflow `manifest.audit.change_log`-da ətraflı log saxlayır.
 
-# PostgreSQL logs
-docker logs postgres_ytb -f
-```
+## 7. API Rate Limits
 
----
+| Servis | Limit | Qeyd |
+|--------|-------|------|
+| OpenAI | 60 RPM (free) | gpt-4o-mini üçün |
+| ElevenLabs | 10K chars/ay (free) | Premium plan tövsiyə olunur |
+| Pexels | 200 req/saat | Pulsuz |
+| Shotstack | 100 renders/ay (free) | Production plan lazım ola bilər |
+| YouTube | 10K quota/gün | Upload çox quota tələb edir |
 
-## 9. Production Tövsiyələri
+## 8. Təhlükəsizlik Tövsiyələri
 
-1. **SSL/TLS**: Bütün endpoint-ləri HTTPS arxasında yerləşdirin
-2. **Backup**: PostgreSQL-i mütəmadi backup edin
-3. **Monitoring**: n8n execution history-ni izləyin
-4. **Rate Limiting**: API çağırışlarına limit qoyun
-5. **Secrets Management**: API key-ləri vault/secrets manager ilə saxlayın
-
----
-
-## 10. Əlaqə və Dəstək
-
-Problem yaranarsa:
-1. n8n execution log-larını yoxlayın
-2. API provider dashboard-larını yoxlayın (quota, errors)
-3. PostgreSQL query log-larını yoxlayın
+1. **API Key-ləri heç vaxt kodda saxlamayın** - yalnız env variables istifadə edin
+2. **PostgreSQL üçün SSL aktivləşdirin** - production-da mütləq
+3. **n8n-i proxy arxasında saxlayın** - HTTPS üçün
+4. **YouTube credentials-ı refresh edin** - refresh token-ın müddəti bitə bilər
+5. **Rate limit-lərə diqqət edin** - xüsusilə ElevenLabs üçün
 
 ---
 
-## Changelog
-
-- **v2.0** (2025-01-08)
-  - Bütün workflow-lar yenidən yazıldı
-  - Real API inteqrasiyaları əlavə edildi
-  - SQL injection düzəldildi
-  - Webhook trigger-lar əlavə edildi
-  - Retry və timeout konfiqurasiyaları əlavə edildi
+*Son yenilənmə: 2024-01*

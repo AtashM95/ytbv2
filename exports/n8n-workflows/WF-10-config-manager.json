@@ -1,0 +1,129 @@
+{
+  "name": "WF-10 Config Manager",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wf-10-config",
+        "responseMode": "lastNode",
+        "options": {
+          "responseData": "firstEntryJson"
+        }
+      },
+      "id": "trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "webhookId": "wf-10-config"
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $json;\nconst now = new Date().toISOString();\n\ntry {\n  // Determine environment based on mode\n  const mode = input.mode || 'test';\n  const environment = mode === 'test' ? 'test' : (input.environment || 'production');\n  const scope = input.scope || 'global';\n  const channelId = input.channel_id || null;\n  const runtimeOverrides = input.runtime_overrides || {};\n\n  return [\n    {\n      json: {\n        run_id: input.run_id || null,\n        mode: mode,\n        video_type: input.video_type || 'normal',\n        category: input.category || null,\n        custom_topic: input.custom_topic || null,\n        language: input.language || 'en',\n        target_countries: input.target_countries || ['US', 'UK', 'CA', 'AU'],\n        video_length: input.video_length || {},\n        quality: input.quality || {},\n        options: input.options || {},\n        source_video_url: input.source_video_url || null,\n        environment: environment,\n        scope: scope,\n        channel_id: channelId,\n        runtime_overrides: runtimeOverrides,\n        original_input: input\n      }\n    }\n  ];\n} catch (error) {\n  return [\n    {\n      json: {\n        error: true,\n        error_message: error.message,\n        status: 'FAILED_CONFIG_INIT'\n      }\n    }\n  ];\n}"
+      },
+      "id": "normalize",
+      "name": "Normalize Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 0]
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $json;\nconst mode = input.mode;\nconst isTest = mode === 'test';\nconst n8nBaseUrl = $env.N8N_BASE_URL || 'http://localhost:5678';\n\n// Build comprehensive defaults\nconst defaults = {\n  environment: input.environment,\n  mode: mode,\n  is_test: isTest,\n  \n  // n8n settings\n  n8n: {\n    base_url: n8nBaseUrl\n  },\n  \n  // OpenAI settings\n  openai: {\n    api_key: { type: 'env', ref: 'OPENAI_API_KEY' },\n    model: 'gpt-4o-mini',\n    max_tokens: 4000,\n    temperature: 0.7\n  },\n  \n  // ElevenLabs TTS settings\n  tts: {\n    provider: 'elevenlabs',\n    api_key: { type: 'env', ref: 'ELEVENLABS_API_KEY' },\n    model: 'eleven_multilingual_v2',\n    stability: 0.5,\n    similarity_boost: 0.75,\n    style: 0.0,\n    use_speaker_boost: true,\n    voices: {\n      en: { male: 'pNInz6obpgDQGcFmaJgB', female: 'EXAVITQu4vr4xnSDxMaL' },\n      ar: { male: '2EiwWnXFnvU5JabPnv8n', female: 'XB0fDUnXU5powFXDhCwa' },\n      tr: { male: 'ErXwobaYiN019PkySvjV', female: 'MF3mGyEYCl7XYWbV9V6O' },\n      es: { male: 'VR6AewLTigWG4xSOukaG', female: 'jBpfuIE2acCO8z3wKNLl' },\n      fr: { male: 'yoZ06aMxZJJ28mfd3POQ', female: 'XrExE9yKIg1WjnnlVkGX' },\n      de: { male: 'ODq5zmih8GrVes37Dizd', female: 'jsCqWAovK2LkecY7zXl4' },\n      pt: { male: 'g5CIjZEefAph4nQFvHAz', female: 'oWAxZDx7w5VEj9dCyTzz' },\n      hi: { male: 'nPczCjzI2devNBz1zQrb', female: 'piTKgcLEGmPE4e6mEKli' }\n    },\n    default_gender: 'male'\n  },\n  \n  // Pexels settings\n  pexels: {\n    api_key: { type: 'env', ref: 'PEXELS_API_KEY' },\n    per_page: 5,\n    orientation: 'landscape',\n    min_duration: 5,\n    min_width: 1920,\n    min_height: 1080\n  },\n  \n  // DALL-E settings\n  dalle: {\n    model: 'dall-e-3',\n    size: '1792x1024',\n    quality: 'standard',\n    style_prompt: 'Professional, clean, modern educational style. No text, no human faces, no human figures.'\n  },\n  \n  // Shotstack render settings\n  render: {\n    provider: 'shotstack',\n    api_key: { type: 'env', ref: isTest ? 'SHOTSTACK_SANDBOX_API_KEY' : 'SHOTSTACK_API_KEY' },\n    endpoint: isTest ? 'https://api.shotstack.io/stage' : 'https://api.shotstack.io/v1',\n    default_fps: 30,\n    default_resolution: 'hd',\n    poll_interval_sec: 10,\n    max_wait_sec: 1800,\n    effects: {\n      image: ['zoomIn', 'zoomOut', 'slideLeft', 'slideRight'],\n      transition: { in: 'fade', out: 'fade' }\n    }\n  },\n  \n  // YouTube publish settings\n  publish: {\n    enabled: !isTest,\n    client_id: { type: 'env', ref: 'YOUTUBE_CLIENT_ID' },\n    client_secret: { type: 'env', ref: 'YOUTUBE_CLIENT_SECRET' },\n    refresh_token: { type: 'env', ref: 'YOUTUBE_REFRESH_TOKEN' },\n    default_privacy: isTest ? 'private' : 'unlisted',\n    default_category_id: '27',  // Education\n    best_times: {\n      US: { weekday: '14:00-16:00 EST', weekend: '10:00-12:00 EST' },\n      UK: { weekday: '17:00-19:00 GMT', weekend: '11:00-13:00 GMT' },\n      Global: { best: 'Tuesday/Thursday 14:00-16:00 EST' }\n    }\n  },\n  \n  // Video length presets (in seconds)\n  video_lengths: {\n    normal: {\n      short_3_5: 240,\n      medium_8_12: 600,\n      long_15_20: 1050,\n      extra_25_40: 1950\n    },\n    short: {\n      '15s': 15,\n      '30s': 30,\n      '60s': 60\n    },\n    test: 30\n  },\n  \n  // Word count estimates (words per minute ~150)\n  word_counts: {\n    short_3_5: 600,\n    medium_8_12: 1500,\n    long_15_20: 2625,\n    extra_25_40: 4875,\n    test: 75\n  },\n  \n  // Category mappings\n  categories: {\n    tech_ai: { name: 'Technology & AI', youtube_category: '28', keywords: ['technology', 'AI', 'innovation'] },\n    finance: { name: 'Finance & Business', youtube_category: '22', keywords: ['money', 'investing', 'business'] },\n    health: { name: 'Health & Wellness', youtube_category: '26', keywords: ['health', 'fitness', 'wellness'] },\n    education: { name: 'Education', youtube_category: '27', keywords: ['learning', 'education', 'tutorial'] },\n    gaming: { name: 'Gaming', youtube_category: '20', keywords: ['gaming', 'games', 'gameplay'] },\n    cooking: { name: 'Cooking & Food', youtube_category: '26', keywords: ['cooking', 'recipe', 'food'] },\n    travel: { name: 'Travel', youtube_category: '19', keywords: ['travel', 'destination', 'adventure'] },\n    real_estate: { name: 'Real Estate', youtube_category: '22', keywords: ['real estate', 'property', 'investment'] },\n    reviews: { name: 'Product Reviews', youtube_category: '28', keywords: ['review', 'comparison', 'best'] },\n    pets: { name: 'Pets & Animals', youtube_category: '15', keywords: ['pets', 'animals', 'cute'] },\n    custom: { name: 'Custom', youtube_category: '22', keywords: [] }\n  },\n  \n  // Storage settings\n  storage: {\n    base_url: $env.STORAGE_BASE_URL || 'https://storage.example.com',\n    asset_bucket: 'yt-studio-assets'\n  }\n};\n\nreturn [\n  {\n    json: {\n      ...input,\n      defaults: defaults\n    }\n  }\n];"
+      },
+      "id": "defaults",
+      "name": "Load Defaults",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [520, 0]
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": { "__rl": true, "mode": "list", "value": "public" },
+        "table": { "__rl": true, "mode": "list", "value": "yt_studio_config" },
+        "where": {
+          "values": [
+            { "column": "environment", "value": "={{ $json.environment }}" },
+            { "column": "is_active", "value": "=true" }
+          ]
+        },
+        "combineFilters": "AND",
+        "returnAll": true,
+        "options": {}
+      },
+      "id": "querydb",
+      "name": "Query Config DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [780, 0],
+      "credentials": {
+        "postgres": {
+          "id": "postgres_yt_studio",
+          "name": "PostgreSQL YT Studio"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $node['Load Defaults'].json;\nconst dbItems = $input.all();\nconst usedDb = Array.isArray(dbItems) && dbItems.length > 0 && !dbItems[0].json?.error;\n\nfunction setNested(obj, path, value) {\n  const parts = path.split('.');\n  let current = obj;\n  for (let i = 0; i < parts.length - 1; i++) {\n    const key = parts[i];\n    if (!current[key] || typeof current[key] !== 'object') {\n      current[key] = {};\n    }\n    current = current[key];\n  }\n  current[parts[parts.length - 1]] = value;\n}\n\nfunction parseValue(row) {\n  if (row.value_type === 'credential_ref') {\n    return { type: 'credential_ref', ref: row.credential_ref };\n  }\n  if (row.value_type === 'number') {\n    return Number(row.value);\n  }\n  if (row.value_type === 'boolean') {\n    return row.value === 'true' || row.value === true;\n  }\n  if (row.value_type === 'json') {\n    try {\n      return JSON.parse(row.value);\n    } catch (e) {\n      return row.value;\n    }\n  }\n  return row.value;\n}\n\nconst merged = JSON.parse(JSON.stringify(input.defaults));\n\nif (usedDb) {\n  for (const item of dbItems) {\n    const row = item.json;\n    if (!row || !row.key) continue;\n    if (row.scope !== 'global' && row.scope !== input.scope) continue;\n    const value = parseValue(row);\n    setNested(merged, row.key, value);\n  }\n}\n\nreturn [\n  {\n    json: {\n      ...input,\n      merged_config: merged,\n      config_from_db: usedDb,\n      db_records_count: usedDb ? dbItems.length : 0\n    }\n  }\n];"
+      },
+      "id": "merge",
+      "name": "Merge DB Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1040, 0]
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $json;\nconst overrides = input.runtime_overrides || {};\n\nfunction deepMerge(target, source) {\n  for (const key of Object.keys(source)) {\n    const value = source[key];\n    if (value && typeof value === 'object' && !Array.isArray(value)) {\n      if (!target[key]) target[key] = {};\n      deepMerge(target[key], value);\n    } else {\n      target[key] = value;\n    }\n  }\n}\n\nconst resolved = JSON.parse(JSON.stringify(input.merged_config));\nconst hasOverrides = Object.keys(overrides).length > 0;\n\nif (hasOverrides) {\n  deepMerge(resolved, overrides);\n}\n\n// Determine video duration based on mode and video_type\nlet targetDuration = resolved.video_lengths.test;\nlet targetWords = resolved.word_counts.test;\n\nif (input.mode !== 'test') {\n  const videoType = input.video_type || 'normal';\n  const lengthSetting = input.video_length || {};\n  \n  if (videoType === 'short' || videoType === 'short_from_long') {\n    const shortLength = lengthSetting.short || '60s';\n    targetDuration = resolved.video_lengths.short[shortLength] || 60;\n    targetWords = Math.round(targetDuration * 2.5);  // ~2.5 words per second for shorts\n  } else {\n    const normalLength = lengthSetting.normal || 'medium_8_12';\n    targetDuration = resolved.video_lengths.normal[normalLength] || 600;\n    targetWords = resolved.word_counts[normalLength] || 1500;\n  }\n}\n\n// Get voice ID for language\nconst lang = input.language || 'en';\nconst gender = resolved.tts.default_gender || 'male';\nconst voiceId = resolved.tts.voices[lang]?.[gender] || resolved.tts.voices.en.male;\n\n// Determine quality settings\nconst quality = input.quality || {};\nlet resolution = 'hd';\nif (quality.video === '4k') resolution = 'uhd';\nelse if (quality.video === '720p') resolution = 'sd';\n\n// Config source tracking\nlet configSource = 'defaults';\nif (input.config_from_db && hasOverrides) configSource = 'defaults+db+override';\nelse if (input.config_from_db) configSource = 'defaults+db';\nelse if (hasOverrides) configSource = 'defaults+override';\n\nreturn [\n  {\n    json: {\n      ...input,\n      resolved_config: resolved,\n      computed: {\n        target_duration_sec: targetDuration,\n        target_word_count: targetWords,\n        voice_id: voiceId,\n        resolution: resolution,\n        is_test: input.mode === 'test',\n        is_short: input.video_type === 'short' || input.video_type === 'short_from_long'\n      },\n      config_source: configSource\n    }\n  }\n];"
+      },
+      "id": "resolve",
+      "name": "Apply Overrides & Compute",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1300, 0]
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $json;\nconst now = new Date().toISOString();\n\n// Build clean response\nconst response = {\n  run_id: input.run_id,\n  mode: input.mode,\n  video_type: input.video_type,\n  category: input.category,\n  custom_topic: input.custom_topic,\n  language: input.language,\n  target_countries: input.target_countries,\n  video_length: input.video_length,\n  quality: input.quality,\n  options: input.options,\n  source_video_url: input.source_video_url,\n  environment: input.environment,\n  scope: input.scope,\n  channel_id: input.channel_id,\n  \n  // Resolved configuration\n  resolved_config: input.resolved_config,\n  \n  // Computed values for easy access\n  computed: input.computed,\n  \n  // Meta\n  config_source: input.config_source,\n  config_resolved_at: now,\n  schema_version: '2.0',\n  status: 'CONFIG_RESOLVED'\n};\n\nreturn [{ json: response }];"
+      },
+      "id": "response",
+      "name": "Build Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 0]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{"node": "Normalize Input", "type": "main", "index": 0}]]
+    },
+    "Normalize Input": {
+      "main": [[{"node": "Load Defaults", "type": "main", "index": 0}]]
+    },
+    "Load Defaults": {
+      "main": [[{"node": "Query Config DB", "type": "main", "index": 0}]]
+    },
+    "Query Config DB": {
+      "main": [[{"node": "Merge DB Config", "type": "main", "index": 0}]]
+    },
+    "Merge DB Config": {
+      "main": [[{"node": "Apply Overrides & Compute", "type": "main", "index": 0}]]
+    },
+    "Apply Overrides & Compute": {
+      "main": [[{"node": "Build Response", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "versionId": "yt-studio-wf-10-v1",
+  "meta": { "templateCredsSetupCompleted": true },
+  "id": "wf-10"
+}

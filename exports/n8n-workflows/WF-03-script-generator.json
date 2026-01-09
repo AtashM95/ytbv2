@@ -1,0 +1,77 @@
+{
+  "name": "WF-03 Script Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wf-03-script",
+        "responseMode": "lastNode",
+        "options": { "responseData": "firstEntryJson" }
+      },
+      "id": "trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "webhookId": "wf-03-script"
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $json;\nconst config = input.resolved_config || {};\nconst computed = input.computed || {};\n\nconst topic = input.selected_topic || input.manifest?.topic?.title || 'Interesting Topic';\nconst keywords = input.keywords || input.manifest?.topic?.keywords || [];\nconst language = input.language || 'en';\nconst videoType = input.video_type || 'normal';\nconst category = input.category || 'education';\n\n// Determine target duration and word count\nconst isTest = input.mode === 'test';\nconst isShort = videoType === 'short' || videoType === 'short_from_long';\n\nlet targetDuration = computed.target_duration_sec || (isTest ? 30 : (isShort ? 60 : 600));\nlet targetWords = computed.target_word_count || (isTest ? 75 : (isShort ? 150 : 1500));\nlet numSections = isShort ? 1 : (isTest ? 2 : Math.ceil(targetDuration / 120));\n\n// Build system prompt based on video type\nlet systemPrompt, userPrompt;\n\nif (isShort) {\n  systemPrompt = `You are a viral YouTube Shorts scriptwriter. Write extremely concise, punchy scripts that grab attention instantly.\n\nRules:\n- Maximum ${targetWords} words\n- First 2 seconds must hook the viewer\n- Every word must earn its place\n- End with a call-to-action\n- Use [SCENE: description] markers for visuals\n- Language: ${language.toUpperCase()}`;\n\n  userPrompt = `Write a ${targetDuration}-second YouTube Short script about: ${topic}\n\nKeywords to include: ${keywords.join(', ')}\n\nFormat:\n[SCENE 1: visual description]\nScript text...\n\nMake it VIRAL!`;\n\n} else {\n  systemPrompt = `You are a professional YouTube scriptwriter for ${category} content targeting English-speaking audiences in USA, UK, Canada, and Australia.\n\nYour scripts are:\n- Engaging with pattern interrupts every 30-60 seconds\n- Conversational, not robotic\n- Optimized for retention\n- Faceless video friendly (no on-camera references)\n\nAlways include:\n- [SCENE X: description] markers for each scene\n- [PAUSE] markers for natural breaks\n- [B-ROLL: description] suggestions for visuals\n\nLanguage: ${language.toUpperCase()}`;\n\n  userPrompt = `Write a complete YouTube video script.\n\nTOPIC: ${topic}\nKEYWORDS: ${keywords.join(', ')}\nTARGET LENGTH: ${Math.round(targetDuration / 60)} minutes (~${targetWords} words)\nSECTIONS: ${numSections}\n\nStructure:\n1. HOOK (first 30 seconds) - Pattern interrupt, shocking fact, or question\n2. INTRO (30-60 seconds) - Brief overview, credibility\n3. MAIN CONTENT - ${numSections - 2} sections with clear transitions\n4. CONCLUSION - Summary and CTA\n\nInclude timestamp suggestions at the end.`;\n}\n\nreturn [{\n  json: {\n    ...input,\n    script_request: {\n      system_prompt: systemPrompt,\n      user_prompt: userPrompt,\n      target_words: targetWords,\n      target_duration: targetDuration,\n      num_sections: numSections,\n      is_short: isShort\n    }\n  }\n}];"
+      },
+      "id": "prepare",
+      "name": "Prepare Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{$env.OPENAI_API_KEY}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{$json.resolved_config?.openai?.model || 'gpt-4o-mini'}}\",\n  \"messages\": [\n    {\"role\": \"system\", \"content\": {{JSON.stringify($json.script_request.system_prompt)}}},\n    {\"role\": \"user\", \"content\": {{JSON.stringify($json.script_request.user_prompt)}}}\n  ],\n  \"max_tokens\": {{$json.resolved_config?.openai?.max_tokens || 4000}},\n  \"temperature\": {{$json.resolved_config?.openai?.temperature || 0.7}}\n}",
+        "options": { "timeout": 120000 }
+      },
+      "id": "openai",
+      "name": "Generate Script",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [520, 0],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $node['Prepare Prompt'].json;\nconst aiResponse = $json;\nconst now = new Date().toISOString();\n\ntry {\n  if (aiResponse.error || !aiResponse.choices?.[0]?.message?.content) {\n    throw new Error(aiResponse.error?.message || 'Script generation failed');\n  }\n\n  const scriptDraft = aiResponse.choices[0].message.content;\n  \n  // Extract scenes from script\n  const sceneRegex = /\\[SCENE\\s*(\\d+):\\s*([^\\]]+)\\]/gi;\n  const scenes = [];\n  let match;\n  while ((match = sceneRegex.exec(scriptDraft)) !== null) {\n    scenes.push({\n      scene: parseInt(match[1]),\n      description: match[2].trim(),\n      duration_sec: input.script_request.target_duration / (input.script_request.num_sections || 3)\n    });\n  }\n  \n  // If no scenes found, create default\n  if (scenes.length === 0) {\n    const defaultDuration = input.script_request.target_duration / 3;\n    scenes.push(\n      { scene: 1, description: 'Introduction', duration_sec: defaultDuration },\n      { scene: 2, description: 'Main content', duration_sec: defaultDuration },\n      { scene: 3, description: 'Conclusion', duration_sec: defaultDuration }\n    );\n  }\n\n  return [{\n    json: {\n      run_id: input.run_id,\n      mode: input.mode,\n      script_draft: scriptDraft,\n      scene_plan: scenes,\n      word_count: scriptDraft.split(/\\s+/).length,\n      target_words: input.script_request.target_words,\n      is_short: input.script_request.is_short,\n      status: 'SCRIPT_GENERATED'\n    }\n  }];\n\n} catch (error) {\n  return [{\n    json: {\n      run_id: input.run_id,\n      error: true,\n      error_message: error.message,\n      status: 'FAILED'\n    }\n  }];\n}"
+      },
+      "id": "process",
+      "name": "Process Script",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 0]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": { "main": [[{"node": "Prepare Prompt", "type": "main", "index": 0}]] },
+    "Prepare Prompt": { "main": [[{"node": "Generate Script", "type": "main", "index": 0}]] },
+    "Generate Script": { "main": [[{"node": "Process Script", "type": "main", "index": 0}]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "versionId": "yt-studio-wf-03-v1",
+  "meta": { "templateCredsSetupCompleted": true },
+  "id": "wf-03"
+}

@@ -1,0 +1,278 @@
+{
+  "name": "WF-06 Asset Collector",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wf-06-assets",
+        "responseMode": "lastNode",
+        "options": { "responseData": "firstEntryJson" }
+      },
+      "id": "trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "webhookId": "wf-06-assets"
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $json;\nconst config = input.resolved_config || {};\nconst scenes = input.manifest?.scene_plan || [];\n\nif (!scenes.length) {\n  return [{\n    json: {\n      ...input,\n      error: true,\n      error_message: 'No scene plan available for asset collection',\n      status: 'FAILED'\n    }\n  }];\n}\n\n// Build search queries for each scene\nconst assetRequests = scenes.map((scene, idx) => {\n  const description = scene.description || 'background video';\n  \n  // Extract key terms from scene description\n  const searchQuery = description\n    .replace(/[^a-zA-Z0-9\\s]/g, '')\n    .split(' ')\n    .filter(w => w.length > 3)\n    .slice(0, 3)\n    .join(' ') || 'nature background';\n  \n  return {\n    scene_index: idx,\n    scene_number: scene.scene || idx + 1,\n    original_description: description,\n    search_query: searchQuery,\n    duration_needed: scene.duration_sec || 30,\n    orientation: 'landscape',\n    min_duration: Math.max(5, (scene.duration_sec || 30) - 10),\n    asset_type: null,\n    asset_url: null,\n    fallback_used: null\n  };\n});\n\nreturn [{\n  json: {\n    ...input,\n    asset_requests: assetRequests,\n    total_scenes: assetRequests.length,\n    current_scene_index: 0\n  }\n}];"
+      },
+      "id": "prepare",
+      "name": "Prepare Asset Requests",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 0]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "split_scenes",
+      "name": "Process Each Scene",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [520, 0]
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $json;\nconst requests = input.asset_requests || [];\nconst currentIndex = input.current_scene_index || 0;\n\nif (currentIndex >= requests.length) {\n  return [{ json: { ...input, processing_complete: true } }];\n}\n\nconst currentRequest = requests[currentIndex];\n\nreturn [{\n  json: {\n    ...input,\n    current_request: currentRequest,\n    processing_complete: false\n  }\n}];"
+      },
+      "id": "get_current",
+      "name": "Get Current Scene",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.pexels.com/videos/search?query={{encodeURIComponent($json.current_request.search_query)}}&orientation={{$json.current_request.orientation}}&per_page=5&min_duration={{$json.current_request.min_duration}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "={{$env.PEXELS_API_KEY}}" }
+          ]
+        },
+        "options": { "timeout": 30000 }
+      },
+      "id": "pexels_video",
+      "name": "Search Pexels Videos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1040, -100],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $node['Get Current Scene'].json;\nconst pexelsResponse = $json;\n\nlet videoFound = false;\nlet assetUrl = null;\nlet assetData = null;\n\nif (pexelsResponse.videos && pexelsResponse.videos.length > 0) {\n  // Find best quality video file\n  const video = pexelsResponse.videos[0];\n  const videoFiles = video.video_files || [];\n  \n  // Prefer HD quality\n  const hdFile = videoFiles.find(f => f.quality === 'hd' && f.width >= 1280) ||\n                 videoFiles.find(f => f.quality === 'sd') ||\n                 videoFiles[0];\n  \n  if (hdFile) {\n    videoFound = true;\n    assetUrl = hdFile.link;\n    assetData = {\n      source: 'pexels_video',\n      pexels_id: video.id,\n      width: hdFile.width,\n      height: hdFile.height,\n      duration: video.duration,\n      photographer: video.user?.name || 'Pexels'\n    };\n  }\n}\n\nreturn [{\n  json: {\n    ...input,\n    video_found: videoFound,\n    asset_url: assetUrl,\n    asset_data: assetData\n  }\n}];"
+      },
+      "id": "check_video",
+      "name": "Check Video Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1300, -100]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.video_found}}",
+              "operation": "isTrue"
+            }
+          ]
+        }
+      },
+      "id": "has_video",
+      "name": "Video Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1560, -100]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.pexels.com/v1/search?query={{encodeURIComponent($json.current_request.search_query)}}&orientation={{$json.current_request.orientation}}&per_page=5",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "={{$env.PEXELS_API_KEY}}" }
+          ]
+        },
+        "options": { "timeout": 30000 }
+      },
+      "id": "pexels_photo",
+      "name": "Search Pexels Photos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1820, 0],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $node['Check Video Result'].json;\nconst pexelsResponse = $json;\n\nlet photoFound = false;\nlet assetUrl = null;\nlet assetData = null;\n\nif (pexelsResponse.photos && pexelsResponse.photos.length > 0) {\n  const photo = pexelsResponse.photos[0];\n  \n  // Use large2x or large size\n  assetUrl = photo.src?.large2x || photo.src?.large || photo.src?.original;\n  \n  if (assetUrl) {\n    photoFound = true;\n    assetData = {\n      source: 'pexels_photo',\n      pexels_id: photo.id,\n      width: photo.width,\n      height: photo.height,\n      photographer: photo.photographer || 'Pexels'\n    };\n  }\n}\n\nreturn [{\n  json: {\n    ...input,\n    photo_found: photoFound,\n    asset_url: photoFound ? assetUrl : input.asset_url,\n    asset_data: photoFound ? assetData : input.asset_data,\n    fallback_used: photoFound ? 'pexels_photo' : null\n  }\n}];"
+      },
+      "id": "check_photo",
+      "name": "Check Photo Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2080, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.photo_found}}",
+              "operation": "isTrue"
+            }
+          ]
+        }
+      },
+      "id": "has_photo",
+      "name": "Photo Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2340, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/images/generations",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{$env.OPENAI_API_KEY}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"dall-e-3\",\n  \"prompt\": \"Cinematic wide shot, professional video background: {{$json.current_request.original_description}}. Photorealistic, 16:9 aspect ratio, suitable for YouTube video, no text or watermarks.\",\n  \"n\": 1,\n  \"size\": \"1792x1024\",\n  \"quality\": \"standard\"\n}",
+        "options": { "timeout": 120000 }
+      },
+      "id": "dalle",
+      "name": "Generate DALL-E Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2600, 100],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $node['Check Photo Result'].json;\nconst dalleResponse = $json;\n\nlet assetUrl = null;\nlet assetData = null;\n\nif (dalleResponse.data && dalleResponse.data[0]?.url) {\n  assetUrl = dalleResponse.data[0].url;\n  assetData = {\n    source: 'dalle',\n    revised_prompt: dalleResponse.data[0].revised_prompt,\n    model: 'dall-e-3'\n  };\n}\n\nreturn [{\n  json: {\n    ...input,\n    asset_url: assetUrl,\n    asset_data: assetData,\n    fallback_used: 'dalle'\n  }\n}];"
+      },
+      "id": "check_dalle",
+      "name": "Check DALL-E Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2860, 100]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "mergeByFields": { "values": [] },
+        "options": {}
+      },
+      "id": "merge_assets",
+      "name": "Merge Asset Sources",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [3120, 0]
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $json;\nconst currentRequest = input.current_request;\nconst currentIndex = input.current_scene_index || 0;\n\n// Update asset_requests with result\nconst updatedRequests = [...input.asset_requests];\nupdatedRequests[currentIndex] = {\n  ...currentRequest,\n  asset_type: input.asset_data?.source || 'none',\n  asset_url: input.asset_url,\n  asset_data: input.asset_data,\n  fallback_used: input.fallback_used\n};\n\nreturn [{\n  json: {\n    ...input,\n    asset_requests: updatedRequests,\n    current_scene_index: currentIndex + 1\n  }\n}];"
+      },
+      "id": "update_progress",
+      "name": "Update Progress",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3380, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.current_scene_index}}",
+              "operation": "smallerThan",
+              "value2": "={{$json.total_scenes}}"
+            }
+          ]
+        }
+      },
+      "id": "more_scenes",
+      "name": "More Scenes?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [3640, 0]
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $json;\nconst now = new Date().toISOString();\n\n// Compile final asset list\nconst assets = input.asset_requests.map(req => ({\n  scene: req.scene_number,\n  description: req.original_description,\n  asset_type: req.asset_type || 'none',\n  asset_url: req.asset_url,\n  duration_needed: req.duration_needed,\n  source: req.asset_data?.source || 'none',\n  fallback_used: req.fallback_used\n}));\n\nconst successCount = assets.filter(a => a.asset_url).length;\nconst totalCount = assets.length;\n\nreturn [{\n  json: {\n    run_id: input.run_id,\n    mode: input.mode,\n    assets: assets,\n    asset_summary: {\n      total: totalCount,\n      successful: successCount,\n      failed: totalCount - successCount,\n      sources: {\n        pexels_video: assets.filter(a => a.source === 'pexels_video').length,\n        pexels_photo: assets.filter(a => a.source === 'pexels_photo').length,\n        dalle: assets.filter(a => a.source === 'dalle').length\n      }\n    },\n    collected_at: now,\n    status: successCount === totalCount ? 'ASSETS_COLLECTED' : (successCount > 0 ? 'ASSETS_PARTIAL' : 'ASSETS_FAILED')\n  }\n}];"
+      },
+      "id": "build_response",
+      "name": "Build Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3900, 100]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": { "main": [[{"node": "Prepare Asset Requests", "type": "main", "index": 0}]] },
+    "Prepare Asset Requests": { "main": [[{"node": "Process Each Scene", "type": "main", "index": 0}]] },
+    "Process Each Scene": { "main": [[{"node": "Get Current Scene", "type": "main", "index": 0}]] },
+    "Get Current Scene": { "main": [[{"node": "Search Pexels Videos", "type": "main", "index": 0}]] },
+    "Search Pexels Videos": { "main": [[{"node": "Check Video Result", "type": "main", "index": 0}]] },
+    "Check Video Result": { "main": [[{"node": "Video Found?", "type": "main", "index": 0}]] },
+    "Video Found?": {
+      "main": [
+        [{"node": "Merge Asset Sources", "type": "main", "index": 0}],
+        [{"node": "Search Pexels Photos", "type": "main", "index": 0}]
+      ]
+    },
+    "Search Pexels Photos": { "main": [[{"node": "Check Photo Result", "type": "main", "index": 0}]] },
+    "Check Photo Result": { "main": [[{"node": "Photo Found?", "type": "main", "index": 0}]] },
+    "Photo Found?": {
+      "main": [
+        [{"node": "Merge Asset Sources", "type": "main", "index": 0}],
+        [{"node": "Generate DALL-E Image", "type": "main", "index": 0}]
+      ]
+    },
+    "Generate DALL-E Image": { "main": [[{"node": "Check DALL-E Result", "type": "main", "index": 0}]] },
+    "Check DALL-E Result": { "main": [[{"node": "Merge Asset Sources", "type": "main", "index": 0}]] },
+    "Merge Asset Sources": { "main": [[{"node": "Update Progress", "type": "main", "index": 0}]] },
+    "Update Progress": { "main": [[{"node": "More Scenes?", "type": "main", "index": 0}]] },
+    "More Scenes?": {
+      "main": [
+        [{"node": "Get Current Scene", "type": "main", "index": 0}],
+        [{"node": "Build Response", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "versionId": "yt-studio-wf-06-v1",
+  "meta": { "templateCredsSetupCompleted": true },
+  "id": "wf-06"
+}

@@ -1,110 +1,129 @@
 # Manifest Spesifikasiyası v2.0
 
 ## Məqsəd
-Manifest video istehsalının bütün metadata və statuslarını saxlayan əsas strukturudur. Bu sənəd manifest-in dəqiq strukturunu müəyyən edir.
+Manifest video istehsalının bütün metadata və statuslarını saxlayan əsas strukturdur. Bu sənəd workflow-larda istifadə olunan ətraflı manifest strukturunu müəyyən edir.
 
-## Tam Manifest Strukturu
+## Manifest strukturu
 
 ```json
 {
   "manifest_version": "2.0",
+
   "topic": {
-    "title": "",
-    "category": "",
+    "title": "Video başlığı",
+    "category": "education",
     "language": "az",
-    "keywords": [],
-    "summary": "",
+    "keywords": ["açar", "sözlər"],
+    "summary": "Qısa məzmun təsviri",
     "source_references": [
       {
-        "title": "",
-        "url": "",
-        "license": ""
+        "title": "Mənbə adı",
+        "url": "https://example.com/source",
+        "license": "CC-BY-4.0"
       }
     ]
   },
+
   "script": {
-    "draft": "",
-    "approved": "",
-    "review_notes": [],
-    "last_reviewed_at": null
+    "draft": "İlkin ssenari mətni...",
+    "approved": "Təsdiqlənmiş ssenari mətni...",
+    "review_notes": ["Qeyd 1", "Qeyd 2"],
+    "last_reviewed_at": "2024-01-15T10:30:00Z"
   },
+
   "assets": {
     "scene_plan": [
       {
         "scene": 1,
-        "description": "",
-        "duration_sec": 0.0
+        "description": "Səhnə təsviri",
+        "duration_sec": 25.0
       }
     ],
     "items": [
       {
-        "asset_id": "",
-        "type": "image",
-        "source_url": "",
-        "local_path": "",
-        "checksum_sha256": "",
-        "duration_sec": 0.0,
+        "asset_id": "asset_run123_001",
+        "type": "video|image",
+        "source": "pexels_video|pexels_photo|dalle_generated",
+        "source_url": "https://...",
+        "local_path": "/mnt/assets/run123/scene_1.mp4",
+        "checksum_sha256": "abc123...",
+        "duration_sec": 25.0,
+        "resolution": "1920x1080",
+        "license": "Pexels|DALL-E",
         "metadata": {
-          "license": "",
-          "attribution": "",
-          "tags": []
+          "pexels_id": "12345",
+          "photographer": "John Doe",
+          "scene_number": 1,
+          "scene_description": "...",
+          "generation_error": null
         }
       }
     ],
     "voiceover": {
-      "provider": "",
-      "voice_id": "",
+      "provider": "elevenlabs",
+      "voice_id": "pNInz6obpgDQGcFmaJgB",
       "speed": 1.0,
       "pitch": 0.0,
       "output_format": "mp3",
-      "voiceover_url_signed": null
+      "voiceover_url_signed": "https://storage.example.com/voiceover/run123.mp3"
     }
   },
+
   "render": {
     "resolution": "1920x1080",
     "fps": 30,
     "codec": "h264",
     "bitrate_kbps": 8000,
-    "render_id": null,
-    "render_status": "not_started"
+    "render_id": "render_run123",
+    "render_status": "not_started|rendering|completed|failed",
+    "render_url": "https://cdn.shotstack.io/..."
   },
+
   "publish": {
-    "channel_id": "",
-    "title": "",
-    "description": "",
-    "tags": [],
-    "privacy": "unlisted",
-    "scheduled_at": null,
-    "youtube_video_id": null,
-    "publish_status": "not_published"
+    "channel_id": "UC...",
+    "title": "YouTube video başlığı",
+    "description": "Video təsviri...",
+    "tags": ["tag1", "tag2"],
+    "privacy": "public|unlisted|private",
+    "scheduled_at": "2024-01-20T12:00:00Z",
+    "youtube_video_id": "dQw4w9WgXcQ",
+    "publish_status": "not_published|published|scheduled|failed"
   },
+
   "analytics": {
     "enabled": true,
-    "tracking_tags": [],
-    "first_publish_at": null,
-    "last_metrics_pull_at": null,
-    "metrics": {}
+    "tracking_tags": ["campaign_2024"],
+    "first_publish_at": "2024-01-15T12:00:00Z",
+    "last_metrics_pull_at": "2024-01-16T10:00:00Z",
+    "metrics": {
+      "views": 1000,
+      "likes": 50,
+      "comments": 10
+    }
   },
+
   "final": {
-    "status": "",
-    "summary": "",
-    "completed_at": null
+    "status": "COMPLETED|FAILED_WF_XX|COMPLETED_DRY_RUN",
+    "summary": "Pipeline completed successfully",
+    "completed_at": "2024-01-15T15:30:00Z"
   },
+
   "audit": {
-    "created_by": "",
-    "updated_by": "",
+    "created_by": "wf-01",
+    "updated_by": "wf-08",
     "change_log": [
       {
-        "at": "",
-        "by": "",
-        "change": ""
+        "at": "2024-01-15T10:00:00Z",
+        "by": "wf-01",
+        "change": "step=init status=ok run_id=run123 mode=dry_run"
       }
     ]
   },
+
   "timestamps": {
-    "created_at": "",
-    "updated_at": "",
-    "phase": "ideation"
+    "created_at": "2024-01-15T10:00:00Z",
+    "updated_at": "2024-01-15T15:30:00Z",
+    "phase": "ideation|research|script_draft|script_approved|voiceover_ready|assets_ready|render_ready|published|failed_wf_XX"
   }
 }
 ```
@@ -112,279 +131,79 @@ Manifest video istehsalının bütün metadata və statuslarını saxlayan əsas
 ## Sahələr və Qaydalar
 
 ### manifest_version
-- **Dəyər**: `2.0`
-- **Dəyişməzdir** və bütün workflow-larda eyni saxlanılır.
-
----
+- **Dəyər**: `"2.0"`
+- Dəyişməzdir və bütün workflow-larda eyni saxlanılır.
 
 ### topic
-Video mövzusu haqqında əsas məlumatlar.
-
 | Sahə | Tip | Məcburi | Təsvir |
 |------|-----|---------|--------|
-| `title` | string | ✓ | Video layihəsinin adı |
-| `category` | string | ✓ | YouTube kategoriya adı (education, entertainment, etc.) |
-| `language` | string | ✓ | ISO 639-1 kodu (`az`, `en`, `tr`) |
-| `keywords` | array | ✓ | Açar sözlər siyahısı |
-| `summary` | string | ✓ | Qısa məzmun təsviri |
-| `source_references` | array | ✗ | İstifadə edilən mənbələr |
-
-#### source_references elementi
-```json
-{
-  "title": "Mənbə başlığı",
-  "url": "https://example.com/source",
-  "license": "CC-BY-4.0"
-}
-```
-
----
+| title | string | Bəli | Video mövzusunun başlığı |
+| category | string | Bəli | YouTube kategoriyası |
+| language | string | Bəli | ISO 639-1 kodu |
+| keywords | string[] | Bəli | Açar sözlər massivi |
+| summary | string | Xeyr | Qısa məzmun təsviri |
+| source_references | object[] | Xeyr | Mənbələr siyahısı |
 
 ### script
-Ssenari mərhələsi məlumatları.
-
 | Sahə | Tip | Məcburi | Təsvir |
 |------|-----|---------|--------|
-| `draft` | string | ✗ | WF-03 tərəfindən yaradılan ilkin ssenari |
-| `approved` | string | ✗ | WF-04 tərəfindən təsdiqlənmiş ssenari |
-| `review_notes` | array | ✗ | Rəy qeydləri siyahısı |
-| `last_reviewed_at` | string/null | ✗ | Son rəy tarixi (ISO-8601) |
+| draft | string | Xeyr | WF-03 tərəfindən yaradılan ilkin ssenari |
+| approved | string | Xeyr | WF-04 tərəfindən təsdiqlənmiş ssenari |
+| review_notes | string[] | Xeyr | Rəy qeydləri |
+| last_reviewed_at | ISO-8601 | Xeyr | Son rəy tarixi |
 
----
-
-### assets
-Video aktivləri (şəkillər, voiceover).
-
-#### scene_plan elementi
-```json
-{
-  "scene": 1,
-  "description": "Səhnə təsviri",
-  "duration_sec": 6.0
-}
-```
-
-#### items elementi (asset)
-```json
-{
-  "asset_id": "asset_run_xxx_001",
-  "type": "image",
-  "source_url": "https://cdn.example.com/image.png",
-  "local_path": "/mnt/assets/run_xxx/image.png",
-  "checksum_sha256": "e3b0c44298fc1c149afbf4c8996fb924...",
-  "duration_sec": 6.0,
-  "metadata": {
-    "license": "CC-BY-4.0",
-    "attribution": "Source Name",
-    "tags": ["tag1", "tag2"]
-  }
-}
-```
-
-#### voiceover
-| Sahə | Tip | Default | Təsvir |
+### assets.items (Asset metadata)
+| Sahə | Tip | Məcburi | Təsvir |
 |------|-----|---------|--------|
-| `provider` | string | "" | TTS provider adı (elevenlabs, acme-tts) |
-| `voice_id` | string | "" | Səs identifikatoru |
-| `speed` | number | 1.0 | Səs sürəti |
-| `pitch` | number | 0.0 | Səs tonu |
-| `output_format` | string | "mp3" | Çıxış formatı |
-| `voiceover_url_signed` | string/null | null | İmzalanmış audio URL |
-
----
+| asset_id | string | Bəli | Unikal asset ID |
+| type | string | Bəli | video və ya image |
+| source | string | Bəli | pexels_video, pexels_photo, dalle_generated |
+| source_url | string | Bəli | Orijinal mənbə URL-i |
+| local_path | string | Bəli | Yerli fayl yolu |
+| duration_sec | number | Bəli | Asset müddəti |
+| license | string | Bəli | Lisenziya |
 
 ### render
-Video render parametrləri.
-
-| Sahə | Tip | Default | Təsvir |
+| Sahə | Tip | Məcburi | Təsvir |
 |------|-----|---------|--------|
-| `resolution` | string | "1920x1080" | Video həlli |
-| `fps` | number | 30 | Kadr sürəti |
-| `codec` | string | "h264" | Video codec |
-| `bitrate_kbps` | number | 8000 | Bitrate (kbps) |
-| `render_id` | string/null | null | Render job ID |
-| `render_status` | string | "not_started" | Status (not_started, rendering, completed, failed) |
-
----
+| resolution | string | Bəli | 1920x1080 |
+| fps | number | Bəli | Frame per second |
+| render_id | string | Xeyr | Render job ID |
+| render_status | string | Xeyr | Render statusu |
+| render_url | string | Xeyr | Final video URL-i |
 
 ### publish
-YouTube publish parametrləri.
-
-| Sahə | Tip | Default | Təsvir |
+| Sahə | Tip | Məcburi | Təsvir |
 |------|-----|---------|--------|
-| `channel_id` | string | "" | YouTube channel ID |
-| `title` | string | "" | Video başlığı |
-| `description` | string | "" | Video təsviri |
-| `tags` | array | [] | Video etiketləri |
-| `privacy` | string | "unlisted" | `public`, `unlisted`, `private` |
-| `scheduled_at` | string/null | null | Planlaşdırılmış vaxt (ISO-8601) |
-| `youtube_video_id` | string/null | null | Upload sonrası video ID |
-| `publish_status` | string | "not_published" | Status |
+| channel_id | string | Bəli | YouTube channel ID |
+| title | string | Bəli | YouTube video başlığı |
+| privacy | string | Bəli | public, unlisted, private |
+| youtube_video_id | string | Xeyr | Yüklənmiş video ID-si |
+| publish_status | string | Xeyr | Yayım statusu |
 
----
+### timestamps.phase dəyərləri
+- ideation - İlkin mərhələ
+- research - Mənbə araşdırması (WF-02)
+- script_draft - Ssenari yazılıb (WF-03)
+- script_approved - Ssenari təsdiqlənib (WF-04)
+- voiceover_ready - Voiceover hazırdır (WF-05)
+- assets_ready - Asset-lər hazırdır (WF-06)
+- render_ready - Render tamamlandı (WF-07)
+- published - YouTube-da yayımlandı (WF-08)
+- failed_wf_XX - Xəta baş verdi
 
-### analytics
-Analitika konfiqurasiyası.
+## Asset Seçim Prioriteti (WF-06)
 
-| Sahə | Tip | Default | Təsvir |
-|------|-----|---------|--------|
-| `enabled` | boolean | true | Analitika aktiv? |
-| `tracking_tags` | array | [] | İzləmə etiketləri |
-| `first_publish_at` | string/null | null | İlk publish tarixi |
-| `last_metrics_pull_at` | string/null | null | Son metrik çəkilmə tarixi |
-| `metrics` | object | {} | Metrik məlumatları |
+1. Pexels VIDEO (Birinci prioritet)
+2. Pexels PHOTO (İkinci prioritet)
+3. DALL-E (Son fallback)
 
----
+## API Key Referansları
 
-### final
-Son nəticə məlumatları.
-
-| Sahə | Tip | Təsvir |
-|------|-----|--------|
-| `status` | string | Son status (COMPLETED, FAILED, etc.) |
-| `summary` | string | Xülasə mesajı |
-| `completed_at` | string/null | Tamamlanma tarixi |
-
----
-
-### audit
-Dəyişiklik izləmə.
-
-| Sahə | Tip | Təsvir |
-|------|-----|--------|
-| `created_by` | string | Yaradan workflow (wf-01) |
-| `updated_by` | string | Son yeniləyən workflow |
-| `change_log` | array | Dəyişiklik tarixçəsi |
-
-#### change_log elementi
-```json
-{
-  "at": "2025-02-01T09:00:00Z",
-  "by": "wf-01",
-  "change": "step=init status=ok run_id=run_xxx mode=dry_run"
-}
-```
-
----
-
-### timestamps
-Zaman damğaları və mərhələ.
-
-| Sahə | Tip | Təsvir |
-|------|-----|--------|
-| `created_at` | string | Yaradılma tarixi (ISO-8601) |
-| `updated_at` | string | Son yenilənmə tarixi |
-| `phase` | string | Cari mərhələ |
-
-#### Mərhələlər (phase)
-1. `ideation` - İlkin fikir mərhələsi
-2. `research` - Araşdırma (WF-02)
-3. `script_draft` - Ssenari layihəsi (WF-03)
-4. `script_approved` - Ssenari təsdiqi (WF-04)
-5. `voiceover_ready` - Voiceover hazır (WF-05)
-6. `assets_ready` - Aktivlər hazır (WF-06)
-7. `rendering` - Render prosesi
-8. `render_ready` - Render hazır (WF-07)
-9. `published` - YouTube-da yayımlandı (WF-08)
-10. `failed_*` - Xəta mərhələləri (failed_wf_02, failed_wf_03, etc.)
-
----
-
-## Workflow Contract Strukturu
-
-Hər workflow arasında ötürülən əsas contract:
-
-```json
-{
-  "run_id": "run_20250201_0001",
-  "mode": "dry_run|staging|production",
-  "scene_assets": [],
-  "voiceover_url_signed": null,
-  "render_id": null,
-  "youtube_video_id": null,
-  "manifest": { /* Tam manifest */ },
-  "resolved_config": { /* WF-10-dan gələn config */ },
-  "environment": "staging",
-  "scope": "global|channel|workflow|run",
-  "channel_id": null,
-  "runtime_overrides": {},
-  "status": "IN_PROGRESS|COMPLETED|FAILED_*",
-  "halt": false
-}
-```
-
----
-
-## Resolved Config Strukturu
-
-WF-10 tərəfindən qaytarılan konfiqurasiya:
-
-```json
-{
-  "environment": "staging",
-  "publish": {
-    "publish_enabled": true,
-    "privacy_default": "unlisted",
-    "channel_id": "",
-    "credentials": {
-      "type": "credential_ref",
-      "ref": "youtube_oauth2"
-    }
-  },
-  "storage": {
-    "base_url": "https://storage.example.com",
-    "signing_key": {
-      "type": "credential_ref",
-      "ref": "storage_signing"
-    },
-    "asset_bucket": "ytb-assets"
-  },
-  "openai": {
-    "api_key": {
-      "type": "credential_ref",
-      "ref": "openai_api"
-    },
-    "model": "gpt-4o-mini",
-    "max_tokens": 2000
-  },
-  "tts": {
-    "provider": "elevenlabs",
-    "api_key": {
-      "type": "credential_ref",
-      "ref": "elevenlabs_api"
-    },
-    "model": "eleven_multilingual_v2",
-    "default_voice_id": "pNInz6obpgDQGcFmaJgB"
-  },
-  "image_gen": {
-    "provider": "dalle",
-    "api_key": {
-      "type": "credential_ref",
-      "ref": "openai_api"
-    },
-    "model": "dall-e-3",
-    "size": "1792x1024",
-    "quality": "standard"
-  },
-  "render": {
-    "provider": "shotstack",
-    "api_key": {
-      "type": "credential_ref",
-      "ref": "shotstack_api"
-    },
-    "endpoint": "https://api.shotstack.io/v1",
-    "timeout_sec": 1800
-  },
-  "branding": {
-    "default_tags": ["elm", "maarif", "azərbaycanca"],
-    "channel_name": "Helal Elm"
-  },
-  "runtime": {
-    "dry_run": false,
-    "publish_off": false
-  },
-  "n8n": {
-    "base_url": "https://n8n.example.com"
-  }
-}
-```
+| Key | Env Variable | resolved_config path |
+|-----|--------------|---------------------|
+| OpenAI | OPENAI_API_KEY | resolved_config.openai.api_key |
+| ElevenLabs | ELEVENLABS_API_KEY | resolved_config.tts.api_key |
+| Pexels | PEXELS_API_KEY | resolved_config.pexels.api_key |
+| Shotstack | SHOTSTACK_API_KEY | resolved_config.render.api_key |
+| YouTube | YOUTUBE_REFRESH_TOKEN | resolved_config.publish.credentials |

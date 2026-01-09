@@ -1,0 +1,335 @@
+{
+  "test_mode_simple": {
+    "description": "Simple test mode request to verify pipeline",
+    "endpoint": "POST /webhook/main-router",
+    "payload": {
+      "mode": "test",
+      "category": "education",
+      "custom_topic": "5 Tips for Better Memory",
+      "language": "en"
+    }
+  },
+
+  "test_mode_full": {
+    "description": "Full test mode request with all options",
+    "endpoint": "POST /webhook/main-router",
+    "payload": {
+      "mode": "test",
+      "video_type": "normal",
+      "category": "tech_ai",
+      "custom_topic": "How ChatGPT is Changing Programming",
+      "language": "en",
+      "target_countries": ["US", "UK", "CA"],
+      "video_length": {
+        "normal": "medium_8_12",
+        "short": "60s"
+      },
+      "quality": {
+        "video": "1080p",
+        "voice": "premium"
+      },
+      "options": {
+        "auto_thumbnail": true,
+        "seo_optimization": true,
+        "auto_tags": true
+      }
+    }
+  },
+
+  "auto_trend_tech": {
+    "description": "Auto-trend mode for tech/AI category",
+    "endpoint": "POST /webhook/main-router",
+    "payload": {
+      "mode": "auto_trend",
+      "video_type": "normal",
+      "category": "tech_ai",
+      "language": "en",
+      "target_countries": ["US", "UK"],
+      "video_length": {
+        "normal": "medium_8_12"
+      },
+      "quality": {
+        "video": "1080p",
+        "voice": "premium"
+      },
+      "options": {
+        "auto_thumbnail": true,
+        "seo_optimization": true,
+        "auto_tags": true,
+        "best_time_publish": true
+      }
+    }
+  },
+
+  "auto_trend_finance": {
+    "description": "Auto-trend mode for finance category (high CPM)",
+    "endpoint": "POST /webhook/main-router",
+    "payload": {
+      "mode": "auto_trend",
+      "video_type": "normal",
+      "category": "finance",
+      "language": "en",
+      "target_countries": ["US", "CA", "AU"],
+      "video_length": {
+        "normal": "long_15_20"
+      },
+      "quality": {
+        "video": "1080p",
+        "voice": "premium"
+      },
+      "options": {
+        "auto_thumbnail": true,
+        "seo_optimization": true,
+        "auto_tags": true,
+        "competitor_analysis": true
+      }
+    }
+  },
+
+  "manual_mode_education": {
+    "description": "Manual mode with specific topic",
+    "endpoint": "POST /webhook/main-router",
+    "payload": {
+      "mode": "manual",
+      "video_type": "normal",
+      "category": "education",
+      "custom_topic": "How to Learn Any Skill in 30 Days",
+      "language": "en",
+      "target_countries": ["US", "UK", "CA", "AU"],
+      "video_length": {
+        "normal": "medium_8_12"
+      },
+      "quality": {
+        "video": "1080p",
+        "voice": "premium"
+      },
+      "options": {
+        "auto_thumbnail": true,
+        "seo_optimization": true,
+        "auto_tags": true
+      }
+    }
+  },
+
+  "short_video": {
+    "description": "Create YouTube Short (under 60 seconds)",
+    "endpoint": "POST /webhook/main-router",
+    "payload": {
+      "mode": "manual",
+      "video_type": "short",
+      "category": "health",
+      "custom_topic": "One Simple Trick to Fall Asleep Fast",
+      "language": "en",
+      "target_countries": ["US"],
+      "quality": {
+        "video": "1080p",
+        "voice": "premium"
+      },
+      "options": {
+        "auto_thumbnail": true,
+        "seo_optimization": true
+      }
+    }
+  },
+
+  "both_normal_and_short": {
+    "description": "Create both normal video and short version",
+    "endpoint": "POST /webhook/main-router",
+    "payload": {
+      "mode": "manual",
+      "video_type": "both",
+      "category": "cooking",
+      "custom_topic": "5-Minute Healthy Breakfast Ideas",
+      "language": "en",
+      "target_countries": ["US", "UK"],
+      "video_length": {
+        "normal": "short_3_5",
+        "short": "60s"
+      },
+      "quality": {
+        "video": "1080p",
+        "voice": "premium"
+      },
+      "options": {
+        "auto_thumbnail": true,
+        "seo_optimization": true,
+        "auto_tags": true
+      }
+    }
+  },
+
+  "short_from_long_video": {
+    "description": "Extract shorts from existing YouTube video",
+    "endpoint": "POST /webhook/main-router",
+    "payload": {
+      "mode": "auto_trend",
+      "video_type": "short_from_long",
+      "source_video_url": "https://youtube.com/watch?v=dQw4w9WgXcQ",
+      "category": "education",
+      "language": "en"
+    }
+  },
+
+  "multilingual_arabic": {
+    "description": "Arabic language video for Middle East",
+    "endpoint": "POST /webhook/main-router",
+    "payload": {
+      "mode": "manual",
+      "video_type": "normal",
+      "category": "education",
+      "custom_topic": "كيف تتعلم أي مهارة بسرعة",
+      "language": "ar",
+      "target_countries": ["SA", "AE", "EG"],
+      "video_length": {
+        "normal": "medium_8_12"
+      },
+      "quality": {
+        "video": "1080p",
+        "voice": "premium"
+      }
+    }
+  },
+
+  "multilingual_turkish": {
+    "description": "Turkish language video",
+    "endpoint": "POST /webhook/main-router",
+    "payload": {
+      "mode": "manual",
+      "video_type": "normal",
+      "category": "tech_ai",
+      "custom_topic": "Yapay Zeka ile Para Kazanmanın 5 Yolu",
+      "language": "tr",
+      "target_countries": ["TR"],
+      "video_length": {
+        "normal": "medium_8_12"
+      },
+      "quality": {
+        "video": "1080p",
+        "voice": "premium"
+      }
+    }
+  },
+
+  "gaming_category": {
+    "description": "Gaming category video",
+    "endpoint": "POST /webhook/main-router",
+    "payload": {
+      "mode": "auto_trend",
+      "video_type": "normal",
+      "category": "gaming",
+      "language": "en",
+      "target_countries": ["US", "UK", "DE"],
+      "video_length": {
+        "normal": "medium_8_12"
+      },
+      "quality": {
+        "video": "1080p",
+        "voice": "standard"
+      },
+      "options": {
+        "auto_thumbnail": true,
+        "seo_optimization": true,
+        "auto_tags": true
+      }
+    }
+  },
+
+  "custom_category": {
+    "description": "Custom category with specific topic",
+    "endpoint": "POST /webhook/main-router",
+    "payload": {
+      "mode": "manual",
+      "video_type": "normal",
+      "category": "custom",
+      "custom_topic": "History of Ancient Rome: Rise and Fall of an Empire",
+      "language": "en",
+      "target_countries": ["US", "UK"],
+      "video_length": {
+        "normal": "long_15_20"
+      },
+      "quality": {
+        "video": "1080p",
+        "voice": "premium"
+      },
+      "options": {
+        "auto_thumbnail": true,
+        "seo_optimization": true,
+        "auto_tags": true
+      }
+    }
+  },
+
+  "scheduled_publish": {
+    "description": "Schedule video for optimal publish time",
+    "endpoint": "POST /webhook/main-router",
+    "payload": {
+      "mode": "manual",
+      "video_type": "normal",
+      "category": "finance",
+      "custom_topic": "Stock Market Predictions for 2024",
+      "language": "en",
+      "target_countries": ["US"],
+      "video_length": {
+        "normal": "medium_8_12"
+      },
+      "quality": {
+        "video": "1080p",
+        "voice": "premium"
+      },
+      "options": {
+        "auto_thumbnail": true,
+        "seo_optimization": true,
+        "auto_tags": true,
+        "best_time_publish": true
+      }
+    }
+  },
+
+  "direct_trend_analysis": {
+    "description": "Direct call to trend analyzer workflow",
+    "endpoint": "POST /webhook/wf-02-trend",
+    "payload": {
+      "run_id": "test_trend_001",
+      "category": "tech_ai",
+      "language": "en",
+      "target_countries": ["US"]
+    }
+  },
+
+  "direct_script_generation": {
+    "description": "Direct call to script generator workflow",
+    "endpoint": "POST /webhook/wf-03-script",
+    "payload": {
+      "run_id": "test_script_001",
+      "mode": "manual",
+      "selected_topic": "5 Amazing AI Tools You Need in 2024",
+      "keywords": ["AI tools", "productivity", "2024"],
+      "language": "en",
+      "video_type": "normal",
+      "category": "tech_ai",
+      "resolved_config": {
+        "openai": {
+          "model": "gpt-4o-mini",
+          "temperature": 0.7,
+          "max_tokens": 4000
+        }
+      },
+      "computed": {
+        "target_duration_sec": 600,
+        "target_word_count": 1500
+      }
+    }
+  },
+
+  "direct_config_load": {
+    "description": "Direct call to config manager workflow",
+    "endpoint": "POST /webhook/wf-10-config",
+    "payload": {
+      "run_id": "test_config_001",
+      "mode": "test",
+      "video_type": "normal",
+      "language": "en",
+      "category": "education"
+    }
+  }
+}

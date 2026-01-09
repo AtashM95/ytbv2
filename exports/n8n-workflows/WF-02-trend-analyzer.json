@@ -1,0 +1,106 @@
+{
+  "name": "WF-02 Trend Analyzer",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wf-02-trend",
+        "responseMode": "lastNode",
+        "options": { "responseData": "firstEntryJson" }
+      },
+      "id": "trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "webhookId": "wf-02-trend"
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $json;\nconst category = input.category || 'education';\nconst language = input.language || 'en';\nconst targetCountries = input.target_countries || ['US'];\n\n// Category to search terms mapping\nconst categoryKeywords = {\n  tech_ai: ['artificial intelligence', 'AI news', 'tech trends', 'ChatGPT', 'machine learning'],\n  finance: ['stock market', 'cryptocurrency', 'investing tips', 'passive income', 'financial freedom'],\n  health: ['weight loss', 'fitness tips', 'healthy eating', 'mental health', 'workout routine'],\n  education: ['study tips', 'learn fast', 'productivity', 'skill development', 'online learning'],\n  gaming: ['gaming news', 'game review', 'gameplay tips', 'esports', 'new games'],\n  cooking: ['easy recipes', 'meal prep', 'cooking hacks', 'healthy meals', 'quick dinner'],\n  travel: ['travel tips', 'budget travel', 'hidden gems', 'travel vlog', 'destination guide'],\n  real_estate: ['real estate investing', 'house flipping', 'rental property', 'property market', 'first home'],\n  reviews: ['product review', 'best products', 'comparison', 'honest review', 'worth it'],\n  pets: ['pet care', 'dog training', 'cat behavior', 'pet tips', 'animal facts'],\n  custom: [input.custom_topic || 'trending topic']\n};\n\nconst searchTerms = categoryKeywords[category] || categoryKeywords.education;\n\nreturn [{\n  json: {\n    ...input,\n    search_terms: searchTerms,\n    primary_term: searchTerms[0],\n    target_region: targetCountries[0]\n  }\n}];"
+      },
+      "id": "prepare",
+      "name": "Prepare Search",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&chart=mostPopular&regionCode={{$json.target_region}}&videoCategoryId={{$json.category === 'gaming' ? '20' : $json.category === 'education' ? '27' : '22'}}&maxResults=10&key={{$env.YOUTUBE_API_KEY}}",
+        "options": { "timeout": 30000 }
+      },
+      "id": "youtube_trending",
+      "name": "Get YouTube Trending",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [520, 0],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $node['Prepare Search'].json;\nconst ytResponse = $json;\n\nlet trendingVideos = [];\nlet extractedTopics = [];\n\nif (ytResponse.items && Array.isArray(ytResponse.items)) {\n  trendingVideos = ytResponse.items.map(video => ({\n    title: video.snippet?.title,\n    channel: video.snippet?.channelTitle,\n    views: parseInt(video.statistics?.viewCount || 0),\n    likes: parseInt(video.statistics?.likeCount || 0),\n    published: video.snippet?.publishedAt\n  }));\n  \n  // Extract common themes/topics from titles\n  const allWords = trendingVideos\n    .map(v => v.title.toLowerCase())\n    .join(' ')\n    .split(/\\s+/)\n    .filter(w => w.length > 4);\n  \n  const wordFreq = {};\n  allWords.forEach(w => { wordFreq[w] = (wordFreq[w] || 0) + 1; });\n  \n  extractedTopics = Object.entries(wordFreq)\n    .sort((a, b) => b[1] - a[1])\n    .slice(0, 10)\n    .map(([word]) => word);\n}\n\nreturn [{\n  json: {\n    ...input,\n    trending_videos: trendingVideos,\n    extracted_topics: extractedTopics\n  }\n}];"
+      },
+      "id": "analyze_trending",
+      "name": "Analyze Trending",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{$env.OPENAI_API_KEY}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"gpt-4o-mini\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a YouTube trend analyst. Analyze trending data and suggest the best video topic that will get high views and CPM.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Based on this trending data for category {{$json.category}}:\\n\\nTrending videos: {{JSON.stringify($json.trending_videos.slice(0,5))}}\\n\\nExtracted topics: {{$json.extracted_topics.join(', ')}}\\n\\nSearch terms: {{$json.search_terms.join(', ')}}\\n\\nSuggest ONE specific video topic that:\\n1. Is trending but not oversaturated\\n2. Has high CPM potential (target: US, UK, CA, AU)\\n3. Can be made as a faceless video\\n4. Is evergreen or has lasting appeal\\n\\nRespond in JSON format:\\n{\\n  \\\"topic\\\": \\\"exact video topic\\\",\\n  \\\"keywords\\\": [\\\"keyword1\\\", \\\"keyword2\\\", ...],\\n  \\\"estimated_cpm\\\": number,\\n  \\\"competition_level\\\": \\\"low\\\" | \\\"medium\\\" | \\\"high\\\",\\n  \\\"trending_score\\\": 1-100,\\n  \\\"reasoning\\\": \\\"why this topic\\\"\\n}\"\n    }\n  ],\n  \"max_tokens\": 500,\n  \"temperature\": 0.7\n}",
+        "options": { "timeout": 60000 }
+      },
+      "id": "ai_analysis",
+      "name": "AI Topic Analysis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1040, 0],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $node['Analyze Trending'].json;\nconst aiResponse = $json;\nconst now = new Date().toISOString();\n\nlet analysis = {\n  selected_topic: input.search_terms[0],\n  keywords: input.search_terms,\n  estimated_cpm: 15.0,\n  competition_level: 'medium',\n  trending_score: 70,\n  reasoning: 'Default topic based on category'\n};\n\ntry {\n  if (aiResponse.choices && aiResponse.choices[0]?.message?.content) {\n    const content = aiResponse.choices[0].message.content;\n    // Try to parse JSON from response\n    const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      analysis = JSON.parse(jsonMatch[0]);\n    }\n  }\n} catch (e) {\n  // Use default analysis\n}\n\nreturn [{\n  json: {\n    run_id: input.run_id,\n    mode: input.mode,\n    category: input.category,\n    language: input.language,\n    \n    // Trend analysis results\n    selected_topic: analysis.topic || analysis.selected_topic,\n    keywords: analysis.keywords || input.search_terms,\n    estimated_cpm: analysis.estimated_cpm || 15.0,\n    competition_level: analysis.competition_level || 'medium',\n    trending_score: analysis.trending_score || 70,\n    \n    // Additional context\n    trend_analysis: {\n      trending_videos: input.trending_videos,\n      extracted_topics: input.extracted_topics,\n      ai_reasoning: analysis.reasoning\n    },\n    \n    analyzed_at: now,\n    status: 'TREND_ANALYZED'\n  }\n}];"
+      },
+      "id": "build_response",
+      "name": "Build Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1300, 0]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": { "main": [[{"node": "Prepare Search", "type": "main", "index": 0}]] },
+    "Prepare Search": { "main": [[{"node": "Get YouTube Trending", "type": "main", "index": 0}]] },
+    "Get YouTube Trending": { "main": [[{"node": "Analyze Trending", "type": "main", "index": 0}]] },
+    "Analyze Trending": { "main": [[{"node": "AI Topic Analysis", "type": "main", "index": 0}]] },
+    "AI Topic Analysis": { "main": [[{"node": "Build Response", "type": "main", "index": 0}]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "versionId": "yt-studio-wf-02-v1",
+  "meta": { "templateCredsSetupCompleted": true },
+  "id": "wf-02"
+}
