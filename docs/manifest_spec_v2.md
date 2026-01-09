@@ -115,7 +115,7 @@ Manifest video istehsalının bütün metadata və statuslarını saxlayan əsas
       {
         "at": "2024-01-15T10:00:00Z",
         "by": "wf-01",
-        "change": "step=init status=ok run_id=run123 mode=dry_run"
+        "change": "step=init status=ok run_id=run123 mode=test"
       }
     ]
   },

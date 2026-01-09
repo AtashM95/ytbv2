@@ -1,4 +1,4 @@
-# WF-10 Get Config Spesifikasiyası
+# WF-10 Config Manager / Get Config Spesifikasiyası
 
 ## Məqsəd
 WF-10 bütün workflow-lar üçün vahid formatda konfiqurasiya qaytarır. Config resolve edilir və workflow-lar vahid çıxış formatından istifadə edir.
@@ -15,7 +15,7 @@ WF-10 çıxışı aşağıdakı formatdadır (bütün workflow-lara eyni):
 ```json
 {
   "environment": "production",
-  "settings": {
+  "resolved_config": {
     "youtube": {
       "channel_id": "channel_987",
       "privacy_default": "public",
@@ -25,10 +25,17 @@ WF-10 çıxışı aşağıdakı formatdadır (bütün workflow-lara eyni):
       }
     },
     "storage": {
-      "base_url": "https://storage.example.com",
-      "signing_key": {
-        "type": "credential_ref",
-        "ref": "cred_storage_signing"
+      "provider": "cloudinary",
+      "base_url": "https://cdn.example.com",
+      "cloudinary": {
+        "cloud_name": "demo",
+        "upload_preset": "ytb_unsigned",
+        "api_key_ref": { "type": "env", "ref": "CLOUDINARY_API_KEY" },
+        "api_secret_ref": { "type": "env", "ref": "CLOUDINARY_API_SECRET" }
+      },
+      "generic_http": {
+        "upload_endpoint": "https://my-uploader/upload",
+        "auth_header_ref": { "type": "env", "ref": "STORAGE_AUTH_HEADER" }
       }
     },
     "tts": {
@@ -49,17 +56,17 @@ WF-10 çıxışı aşağıdakı formatdadır (bütün workflow-lara eyni):
       "default_tags": ["elm", "maarif", "azərbaycanca"]
     }
   },
-  "resolved_at": "2025-01-10T12:00:00Z",
-  "schema_version": "1.0"
+  "config_resolved_at": "2025-01-10T12:00:00Z",
+  "schema_version": "2.0"
 }
 ```
 
 ## Error handling
 - Config DB bağlantısı uğursuz olarsa `config_unavailable` statusu qaytarılır.
-- Əgər required key-lər yoxdursa `config_incomplete` statusu qaytarılır.
+- Production modda storage config əskikdirsə `FAILED_CONFIG_STORAGE` qaytarılır.
 - Credential provider unreachable olduqda WF-10 yalnız `credential_ref` qaytarır və warning log yazır.
 
 ## Integration qaydaları
 - WF-01…WF-08 hər işə başlamazdan əvvəl WF-10 çağırmalıdır.
-- WF-09 yalnız config yazır, WF-10 isə oxuyur və normalizasiya edir.
+- WF-11 yalnız config yazır, WF-10 isə oxuyur və normalizasiya edir.
 - WF-10 çıxışı contract-lardan asılı deyil, lakin bütün workflow-lar bu çıxışı istifadə edir.
