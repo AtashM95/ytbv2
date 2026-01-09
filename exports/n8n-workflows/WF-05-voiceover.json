@@ -59,19 +59,177 @@
     {
       "parameters": {
         "language": "javascript",
-        "code": "const input = $node['Prepare TTS'].json;\nconst ttsResponse = $json;\nconst now = new Date().toISOString();\n\ntry {\n  if (ttsResponse.error || ttsResponse.detail) {\n    throw new Error(ttsResponse.detail?.message || ttsResponse.error || 'TTS failed');\n  }\n\n  // TODO: In production, upload binary audio to cloud storage (S3, GCS, etc.)\n  // The binary data is available in $binary from the previous node\n  // For now, generate a placeholder signed URL\n  const storageBase = input.resolved_config?.storage?.base_url || 'https://storage.example.com';\n  const signedUrl = `${storageBase}/voiceover/${input.run_id}.mp3?t=${Date.now()}&sig=placeholder`;\n\n  return [{\n    json: {\n      run_id: input.run_id,\n      mode: input.mode,\n      voiceover_url_signed: signedUrl,\n      voiceover_url: signedUrl,\n      voice_id: input.tts_request.voice_id,\n      text_length: input.tts_request.text.length,\n      audio_duration_estimate: Math.ceil(input.tts_request.text.length / 15),\n      has_audio: true,\n      generated_at: now,\n      status: 'VOICEOVER_GENERATED'\n    }\n  }];\n\n} catch (error) {\n  return [{\n    json: {\n      run_id: input.run_id,\n      error: true,\n      error_message: error.message,\n      status: 'FAILED'\n    }\n  }];\n}"
+        "code": "const input = $node['Prepare TTS'].json;\nconst ttsResponse = $json;\nconst now = new Date().toISOString();\n\ntry {\n  if (ttsResponse.error || ttsResponse.detail) {\n    throw new Error(ttsResponse.detail?.message || ttsResponse.error || 'TTS failed');\n  }\n\n  const binary = $binary || {};\n  const binKey = Object.keys(binary)[0];\n  if (!binKey) {\n    throw new Error('No audio binary found from ElevenLabs');\n  }\n\n  const storage = input.resolved_config?.storage || {};\n  const provider = storage.provider || 'cloudinary';\n  const cloudinary = storage.cloudinary || {};\n  const generic = storage.generic_http || {};\n  const folder = 'ytb/voiceover';\n  const publicId = input.run_id || `voiceover-${Date.now()}`;\n  const resourceType = 'video';\n  const uploadPreset = cloudinary.upload_preset || null;\n  const cloudName = cloudinary.cloud_name || null;\n\n  if (provider === 'cloudinary' && !cloudName) {\n    throw new Error('Missing Cloudinary cloud_name for upload');\n  }\n  if (provider === 'generic_http' && !generic.upload_endpoint) {\n    throw new Error('Missing generic upload endpoint');\n  }\n  if (provider !== 'cloudinary' && provider !== 'generic_http') {\n    throw new Error(`Unsupported storage provider: ${provider}`);\n  }\n\n  const output = {\n    ...input,\n    voice_id: input.tts_request.voice_id,\n    text_length: input.tts_request.text.length,\n    audio_duration_estimate: Math.ceil(input.tts_request.text.length / 15),\n    storage_provider: provider,\n    upload_ready: true,\n    cloudinary_cloud_name: cloudName,\n    cloudinary_upload_preset: uploadPreset,\n    cloudinary_upload_url: cloudName ? `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload` : null,\n    cloudinary_resource_type: resourceType,\n    cloudinary_folder: folder,\n    cloudinary_public_id: publicId,\n    generic_upload_endpoint: generic.upload_endpoint || null\n  };\n\n  if (provider === 'cloudinary' && !uploadPreset) {\n    const apiKey = $env.CLOUDINARY_API_KEY || null;\n    const apiSecret = $env.CLOUDINARY_API_SECRET || null;\n    if (!apiKey || !apiSecret) {\n      throw new Error('Missing Cloudinary API credentials for signed upload');\n    }\n    const timestamp = Math.floor(Date.now() / 1000);\n    const params = {\n      folder: folder,\n      public_id: publicId,\n      timestamp: timestamp,\n      resource_type: resourceType\n    };\n    const paramString = Object.keys(params)\n      .sort()\n      .map(key => `${key}=${params[key]}`)\n      .join('&');\n    const signature = require('crypto')\n      .createHash('sha1')\n      .update(paramString + apiSecret)\n      .digest('hex');\n    output.cloudinary_timestamp = timestamp;\n    output.cloudinary_signature = signature;\n  }\n\n  const binaryData = { ...binary };\n  binaryData.file = binary[binKey];\n\n  return [{ json: output, binary: binaryData }];\n} catch (error) {\n  return [{\n    json: {\n      run_id: input.run_id,\n      mode: input.mode,\n      error: true,\n      error_message: error.message,\n      upload_ready: false,\n      status: 'FAILED_TTS',\n      generated_at: now,\n      manifest: input.manifest || null\n    }\n  }];\n}"
+      },
+      "id": "prepare_upload",
+      "name": "Prepare Voiceover Upload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.upload_ready}}",
+              "operation": "isTrue"
+            }
+          ]
+        }
+      },
+      "id": "upload_ready",
+      "name": "Upload Ready?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1040, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.storage_provider}}",
+              "operation": "equals",
+              "value2": "cloudinary"
+            }
+          ]
+        }
+      },
+      "id": "is_cloudinary",
+      "name": "Cloudinary Provider?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1300, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.cloudinary_upload_preset}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "is_unsigned",
+      "name": "Use Unsigned Upload?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1560, -100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.cloudinary_upload_url}}",
+        "sendBody": true,
+        "bodyContentType": "multipart-form-data",
+        "bodyParametersUi": {
+          "parameter": [
+            { "name": "upload_preset", "value": "={{$json.cloudinary_upload_preset}}" },
+            { "name": "folder", "value": "={{$json.cloudinary_folder}}" },
+            { "name": "public_id", "value": "={{$json.cloudinary_public_id}}" }
+          ]
+        },
+        "sendBinaryData": true,
+        "binaryPropertyName": "file",
+        "options": { "timeout": 180000 }
+      },
+      "id": "upload_cloudinary_unsigned",
+      "name": "Upload Voiceover (Cloudinary Unsigned)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1820, -200],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.cloudinary_upload_url}}",
+        "sendBody": true,
+        "bodyContentType": "multipart-form-data",
+        "bodyParametersUi": {
+          "parameter": [
+            { "name": "timestamp", "value": "={{$json.cloudinary_timestamp}}" },
+            { "name": "api_key", "value": "={{$env.CLOUDINARY_API_KEY}}" },
+            { "name": "signature", "value": "={{$json.cloudinary_signature}}" },
+            { "name": "folder", "value": "={{$json.cloudinary_folder}}" },
+            { "name": "public_id", "value": "={{$json.cloudinary_public_id}}" }
+          ]
+        },
+        "sendBinaryData": true,
+        "binaryPropertyName": "file",
+        "options": { "timeout": 180000 }
+      },
+      "id": "upload_cloudinary_signed",
+      "name": "Upload Voiceover (Cloudinary Signed)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1820, 0],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.generic_upload_endpoint}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "={{$env.STORAGE_AUTH_HEADER}}" }
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "multipart-form-data",
+        "sendBinaryData": true,
+        "binaryPropertyName": "file",
+        "options": { "timeout": 180000 }
+      },
+      "id": "upload_generic_http",
+      "name": "Upload Voiceover (Generic HTTP)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1560, 200],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $json;\nconst now = new Date().toISOString();\n\nif (input.upload_ready === false) {\n  return [{\n    json: {\n      run_id: input.run_id,\n      mode: input.mode,\n      error: true,\n      error_message: input.error_message || 'Voiceover upload preparation failed',\n      status: input.status || 'FAILED_TTS',\n      generated_at: now,\n      manifest: input.manifest || null\n    }\n  }];\n}\n\nconst uploadError = input.error || (input.statusCode && input.statusCode >= 400);\nconst uploadUrl = input.secure_url || input.url || input.data?.url || input.body?.url;\n\nif (uploadError || !uploadUrl) {\n  return [{\n    json: {\n      run_id: input.run_id,\n      mode: input.mode,\n      error: true,\n      error_message: input.error_message || input.message || input.error?.message || 'Voiceover upload failed',\n      status: 'FAILED_UPLOAD_VOICEOVER',\n      generated_at: now,\n      manifest: input.manifest || null\n    }\n  }];\n}\n\nconst manifest = input.manifest || {};\nconst voiceoverManifest = {\n  ...(manifest.voiceover || {}),\n  voiceover_url_signed: uploadUrl,\n  voiceover_url: uploadUrl\n};\n\nreturn [{\n  json: {\n    run_id: input.run_id,\n    mode: input.mode,\n    voiceover_url_signed: uploadUrl,\n    voiceover_url: uploadUrl,\n    voice_id: input.voice_id,\n    text_length: input.text_length,\n    audio_duration_estimate: input.audio_duration_estimate,\n    has_audio: true,\n    generated_at: now,\n    status: 'VOICEOVER_GENERATED',\n    manifest: {\n      ...manifest,\n      voiceover: voiceoverManifest\n    }\n  }\n}];"
       },
       "id": "process",
       "name": "Process Audio",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [780, 0]
+      "position": [2080, 0]
     }
   ],
   "connections": {
     "Webhook Trigger": { "main": [[{"node": "Prepare TTS", "type": "main", "index": 0}]] },
     "Prepare TTS": { "main": [[{"node": "Call ElevenLabs", "type": "main", "index": 0}]] },
-    "Call ElevenLabs": { "main": [[{"node": "Process Audio", "type": "main", "index": 0}]] }
+    "Call ElevenLabs": { "main": [[{"node": "Prepare Voiceover Upload", "type": "main", "index": 0}]] },
+    "Prepare Voiceover Upload": { "main": [[{"node": "Upload Ready?", "type": "main", "index": 0}]] },
+    "Upload Ready?": {
+      "main": [
+        [{"node": "Cloudinary Provider?", "type": "main", "index": 0}],
+        [{"node": "Process Audio", "type": "main", "index": 0}]
+      ]
+    },
+    "Cloudinary Provider?": {
+      "main": [
+        [{"node": "Use Unsigned Upload?", "type": "main", "index": 0}],
+        [{"node": "Upload Voiceover (Generic HTTP)", "type": "main", "index": 0}]
+      ]
+    },
+    "Use Unsigned Upload?": {
+      "main": [
+        [{"node": "Upload Voiceover (Cloudinary Unsigned)", "type": "main", "index": 0}],
+        [{"node": "Upload Voiceover (Cloudinary Signed)", "type": "main", "index": 0}]
+      ]
+    },
+    "Upload Voiceover (Cloudinary Unsigned)": { "main": [[{"node": "Process Audio", "type": "main", "index": 0}]] },
+    "Upload Voiceover (Cloudinary Signed)": { "main": [[{"node": "Process Audio", "type": "main", "index": 0}]] },
+    "Upload Voiceover (Generic HTTP)": { "main": [[{"node": "Process Audio", "type": "main", "index": 0}]] }
   },
   "active": false,
   "settings": { "executionOrder": "v1" },

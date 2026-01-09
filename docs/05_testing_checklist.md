@@ -33,7 +33,9 @@
 - Review approval flow və script dəyişiklikləri.
 
 ### WF-05
-- Voiceover yaratma və signed URL.
+- ElevenLabs response=file binary upload edilir.
+- Voiceover output-da `voiceover_url_signed` real və qalıcı URL-dir.
+- `storage.example.com` placeholder URL qalmayıb.
 
 ### WF-06
 - Asset download və checksum təsdiqi.
@@ -42,13 +44,20 @@
 - Render job submission və status polling.
 
 ### WF-08
-- YouTube upload və metadata tətbiqi.
+- DALL-E URL-i əvvəlcə endirilir, sonra storage-a upload olunur.
+- Output-da `thumbnail_url` qalıcı URL-dir (expire olmur).
+- Fallback işləyirsə status `THUMBNAIL_FALLBACK`, yoxdursa `FAILED_THUMBNAIL` olur.
 
 ### WF-09
 - Settings update və credential policy yoxlaması.
 
 ### WF-10
-- Config resolve və required key yoxlaması.
+- Config resolve və storage required key yoxlaması.
+- Production modda storage config əskikdirsə `FAILED_CONFIG_STORAGE` qaytarılır.
+- Test modda storage config əskikdirsə xəbərdarlıqla davam edir.
+
+## Contract yoxlamaları
+- Contract field adları dəyişməyib: run_id, mode, scene_assets, voiceover_url_signed, render_id, youtube_video_id, manifest.
 
 ## Golden sample yoxlamaları
 - `exports/golden_samples/new_run.json` yeni run strukturu ilə müqayisə olunur.
