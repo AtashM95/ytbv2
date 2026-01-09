@@ -120,7 +120,7 @@ Manifest strukturu `docs/06_manifest_spec.md` sənədində dəqiq təyin edilib.
 ```json
 {
   "run_id": "run_20250105_0001",
-  "mode": "staging",
+  "mode": "test",
   "scene_assets": [],
   "voiceover_url_signed": null,
   "render_id": null,
@@ -187,7 +187,7 @@ Manifest strukturu `docs/06_manifest_spec.md` sənədində dəqiq təyin edilib.
 ```json
 {
   "run_id": "run_20250106_0007",
-  "mode": "production",
+  "mode": "manual",
   "scene_assets": [
     {
       "asset_id": "asset_0001",
@@ -274,7 +274,7 @@ Manifest strukturu `docs/06_manifest_spec.md` sənədində dəqiq təyin edilib.
 ```json
 {
   "run_id": "run_20250107_0012",
-  "mode": "production",
+  "mode": "manual",
   "scene_assets": [
     {
       "asset_id": "asset_0100",

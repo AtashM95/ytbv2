@@ -1,4 +1,4 @@
-# WF-10 Get Config Spesifikasiyası
+# WF-10 Config Manager / Get Config Spesifikasiyası
 
 ## Məqsəd
 WF-10 bütün workflow-lar üçün vahid formatda konfiqurasiya qaytarır. Config resolve edilir və workflow-lar vahid çıxış formatından istifadə edir.
@@ -15,7 +15,7 @@ WF-10 çıxışı aşağıdakı formatdadır (bütün workflow-lara eyni):
 ```json
 {
   "environment": "production",
-  "settings": {
+  "resolved_config": {
     "youtube": {
       "channel_id": "channel_987",
       "privacy_default": "public",
@@ -68,5 +68,5 @@ WF-10 çıxışı aşağıdakı formatdadır (bütün workflow-lara eyni):
 
 ## Integration qaydaları
 - WF-01…WF-08 hər işə başlamazdan əvvəl WF-10 çağırmalıdır.
-- WF-09 yalnız config yazır, WF-10 isə oxuyur və normalizasiya edir.
+- WF-11 yalnız config yazır, WF-10 isə oxuyur və normalizasiya edir.
 - WF-10 çıxışı contract-lardan asılı deyil, lakin bütün workflow-lar bu çıxışı istifadə edir.

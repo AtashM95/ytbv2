@@ -1,9 +1,9 @@
 {
-  "name": "WF-09 Settings Panel",
+  "name": "WF-11 Settings Panel",
   "nodes": [
     {
       "parameters": {
-        "formTitle": "WF-09 Settings Panel",
+        "formTitle": "WF-11 Settings Panel",
         "formDescription": "Config DB/Data Table üçün settings update",
         "formFields": {
           "values": [
@@ -156,7 +156,7 @@
         "table": {
           "__rl": true,
           "mode": "list",
-          "value": "ytb_settings"
+          "value": "yt_studio_config"
         },
         "columns": {
           "mappingMode": "defineBelow",

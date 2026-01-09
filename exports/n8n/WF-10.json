@@ -50,7 +50,7 @@
         "table": {
           "__rl": true,
           "mode": "list",
-          "value": "ytb_settings"
+          "value": "yt_studio_config"
         },
         "where": {
           "values": [

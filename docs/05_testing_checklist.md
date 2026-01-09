@@ -1,16 +1,19 @@
 # Testing Checklist
 
 ## Import/Quraşdırma Ardıcıllığı
-1. WF-09 Settings Panel
-2. WF-10 Get Config
-3. WF-01 Ideation Intake
-4. WF-02 Research & Source Intake
-5. WF-03 Script Draft
-6. WF-04 Script Review & Approval
-7. WF-05 Voiceover Generation
-8. WF-06 Scene Asset Build
-9. WF-07 Render Orchestration
-10. WF-08 YouTube Publish
+1. WF-00 Main Router
+2. WF-01 Ideation Intake
+3. WF-02 Research & Source Intake
+4. WF-03 Script Draft
+5. WF-04 Script Review & Approval
+6. WF-05 Voiceover Generation
+7. WF-06 Scene Asset Build
+8. WF-07 Render Orchestration
+9. WF-08 Thumbnail Generator
+10. WF-09 YouTube Publish
+11. WF-10 Get Config
+12. WF-11 Settings Panel
+13. WF-12 Short Extractor
 
 ## Ümumi yoxlamalar
 - Config DB bağlantısı işləkdir.
@@ -49,7 +52,7 @@
 - Fallback işləyirsə status `THUMBNAIL_FALLBACK`, yoxdursa `FAILED_THUMBNAIL` olur.
 
 ### WF-09
-- Settings update və credential policy yoxlaması.
+- YouTube upload və metadata tətbiqi.
 
 ### WF-10
 - Config resolve və storage required key yoxlaması.
