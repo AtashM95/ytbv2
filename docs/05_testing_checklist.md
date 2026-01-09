@@ -59,12 +59,6 @@
 - Production modda storage config əskikdirsə `FAILED_CONFIG_STORAGE` qaytarılır.
 - Test modda storage config əskikdirsə xəbərdarlıqla davam edir.
 
-### WF-11
-- Settings update və credential policy yoxlaması.
-
-### WF-12
-- Shorts extraction job-ları və çıxış contract-i yoxlanır.
-
 ## Contract yoxlamaları
 - Contract field adları dəyişməyib: run_id, mode, scene_assets, voiceover_url_signed, render_id, youtube_video_id, manifest.
 

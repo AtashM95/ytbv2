@@ -56,7 +56,7 @@ WF-10 çıxışı aşağıdakı formatdadır (bütün workflow-lara eyni):
       "default_tags": ["elm", "maarif", "azərbaycanca"]
     }
   },
-  "config_resolved_at": "2025-01-10T12:00:00Z",
+  "resolved_at": "2025-01-10T12:00:00Z",
   "schema_version": "2.0"
 }
 ```
