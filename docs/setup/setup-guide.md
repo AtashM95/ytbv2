@@ -9,7 +9,7 @@ YouTube Automation Studio is a comprehensive n8n-based system for automating fac
 ### Required Services
 
 1. **n8n** (Self-hosted or Cloud)
-   - Version 1.0+ recommended
+   - Version 2.x recommended
    - PostgreSQL database connection
 
 2. **API Keys Required**
@@ -78,17 +78,17 @@ STORAGE_AUTH_HEADER=
 Import each workflow JSON file into n8n in this order:
 
 1. `WF-10-config-manager.json` - Configuration system
-2. `WF-00-main-router.json` - Entry point
-3. `WF-01-orchestrator.json` - Pipeline coordinator
-4. `WF-02-trend-analyzer.json` - Trend analysis
-5. `WF-03-script-generator.json` - Script creation
-6. `WF-04-script-reviewer.json` - Script validation
-7. `WF-05-voiceover.json` - TTS generation
-8. `WF-06-asset-collector.json` - Asset gathering
-9. `WF-07-video-renderer.json` - Video rendering
-10. `WF-08-thumbnail.json` - Thumbnail generation
-11. `WF-09-youtube-publisher.json` - YouTube upload
-12. `WF-11-settings-panel.json` - Settings form
+2. `WF-11-settings-panel.json` - Settings form
+3. `WF-00-main-router.json` - Entry point
+4. `WF-01-orchestrator.json` - Pipeline coordinator
+5. `WF-02-trend-analyzer.json` - Trend analysis
+6. `WF-03-script-generator.json` - Script creation
+7. `WF-04-script-reviewer.json` - Script validation
+8. `WF-05-voiceover.json` - TTS generation
+9. `WF-06-asset-collector.json` - Asset gathering
+10. `WF-07-video-renderer.json` - Video rendering
+11. `WF-08-thumbnail.json` - Thumbnail generation
+12. `WF-09-youtube-publisher.json` - YouTube upload
 13. `WF-12-short-extractor.json` - Shorts extraction
 
 ### Step 4: Configure Credentials
@@ -119,7 +119,7 @@ Other workflows are called via HTTP and don't need to be active.
 Start with test mode to verify the pipeline without costs:
 
 ```json
-POST /webhook/main-router
+POST /webhook/wf-00-main-router
 {
   "mode": "test",
   "category": "education",
@@ -139,7 +139,7 @@ Test mode:
 Let AI find trending topics:
 
 ```json
-POST /webhook/main-router
+POST /webhook/wf-00-main-router
 {
   "mode": "auto_trend",
   "category": "tech_ai",
@@ -156,7 +156,7 @@ POST /webhook/main-router
 Specify your own topic:
 
 ```json
-POST /webhook/main-router
+POST /webhook/wf-00-main-router
 {
   "mode": "manual",
   "category": "finance",
@@ -170,7 +170,7 @@ POST /webhook/main-router
 Create YouTube Shorts from existing videos:
 
 ```json
-POST /webhook/main-router
+POST /webhook/wf-00-main-router
 {
   "mode": "auto_trend",
   "video_type": "short_from_long",

@@ -6,13 +6,18 @@
         "httpMethod": "POST",
         "path": "wf-08-thumbnail",
         "responseMode": "lastNode",
-        "options": { "responseData": "firstEntryJson" }
+        "options": {
+          "responseData": "firstEntryJson"
+        }
       },
       "id": "trigger",
       "name": "Webhook Trigger",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [0, 0],
+      "position": [
+        0,
+        0
+      ],
       "webhookId": "wf-08-thumbnail"
     },
     {
@@ -24,7 +29,10 @@
       "name": "Prepare Thumbnail Prompt",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [260, 0]
+      "position": [
+        260,
+        0
+      ]
     },
     {
       "parameters": {
@@ -33,20 +41,31 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "=Bearer {{$env.OPENAI_API_KEY}}" },
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.OPENAI_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"model\": \"dall-e-3\",\n  \"prompt\": {{JSON.stringify($json.thumbnail_request.prompt)}},\n  \"n\": 1,\n  \"size\": \"1792x1024\",\n  \"quality\": \"hd\"\n}",
-        "options": { "timeout": 120000 }
+        "options": {
+          "timeout": 120000
+        }
       },
       "id": "dalle",
       "name": "Generate Thumbnail",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [520, 0],
+      "position": [
+        520,
+        0
+      ],
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 3000,
@@ -55,13 +74,16 @@
     {
       "parameters": {
         "language": "javascript",
-        "code": "const input = $node['Prepare Thumbnail Prompt'].json;\nconst dalleResponse = $json;\nconst now = new Date().toISOString();\n\ntry {\n  if (dalleResponse.error || !dalleResponse.data?.[0]?.url) {\n    throw new Error(dalleResponse.error?.message || 'Thumbnail generation failed');\n  }\n\n  const thumbnailUrl = dalleResponse.data[0].url;\n  const revisedPrompt = dalleResponse.data[0].revised_prompt;\n\n  return [{\n    json: {\n      ...input,\n      dalle_thumbnail_url: thumbnailUrl,\n      revised_prompt: revisedPrompt,\n      download_ready: true\n    }\n  }];\n\n} catch (error) {\n  const fallbackUrl = input.manifest?.assets?.[0]?.asset_url || null;\n\n  return [{\n    json: {\n      run_id: input.run_id,\n      mode: input.mode,\n      download_ready: false,\n      error: true,\n      error_message: error.message,\n      fallback_url: fallbackUrl,\n      revised_prompt: null,\n      status: fallbackUrl ? 'THUMBNAIL_FALLBACK' : 'FAILED_THUMBNAIL',\n      generated_at: now,\n      manifest: input.manifest || null,\n      thumbnail_request: input.thumbnail_request\n    }\n  }];\n}"
+        "code": "const input = $node['Prepare Thumbnail Prompt'].json;\nconst dalleResponse = $json;\nconst now = new Date().toISOString();\n\nconst statusCode = dalleResponse.statusCode || dalleResponse.error?.code;\nif (statusCode && statusCode >= 400) {\n  const errorCode = statusCode === 429\n    ? 'FAILED_OPENAI_IMAGE_RATE_LIMIT'\n    : (statusCode >= 500 ? 'FAILED_OPENAI_IMAGE_UPSTREAM' : 'FAILED_OPENAI_IMAGE_REQUEST');\n\n  return [{\n    json: {\n      run_id: input.run_id,\n      mode: input.mode,\n      download_ready: false,\n      error: true,\n      error_code: errorCode,\n      error_message: dalleResponse.error?.message || dalleResponse.message || 'Thumbnail generation failed',\n      fallback_url: input.manifest?.assets?.[0]?.asset_url || null,\n      revised_prompt: null,\n      status: errorCode,\n      generated_at: now,\n      manifest: input.manifest || null,\n      thumbnail_request: input.thumbnail_request\n    }\n  }];\n}\n\ntry {\n  if (dalleResponse.error || !dalleResponse.data?.[0]?.url) {\n    throw new Error(dalleResponse.error?.message || 'Thumbnail generation failed');\n  }\n\n  const thumbnailUrl = dalleResponse.data[0].url;\n  const revisedPrompt = dalleResponse.data[0].revised_prompt;\n\n  return [{\n    json: {\n      ...input,\n      dalle_thumbnail_url: thumbnailUrl,\n      revised_prompt: revisedPrompt,\n      download_ready: true\n    }\n  }];\n\n} catch (error) {\n  const fallbackUrl = input.manifest?.assets?.[0]?.asset_url || null;\n\n  return [{\n    json: {\n      run_id: input.run_id,\n      mode: input.mode,\n      download_ready: false,\n      error: true,\n      error_message: error.message,\n      fallback_url: fallbackUrl,\n      revised_prompt: null,\n      status: fallbackUrl ? 'THUMBNAIL_FALLBACK' : 'FAILED_THUMBNAIL',\n      generated_at: now,\n      manifest: input.manifest || null,\n      thumbnail_request: input.thumbnail_request\n    }\n  }];\n}"
       },
       "id": "prepare_download",
       "name": "Prepare Thumbnail Download",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [780, 0]
+      "position": [
+        780,
+        0
+      ]
     },
     {
       "parameters": {
@@ -78,7 +100,10 @@
       "name": "Download Ready?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1040, 0]
+      "position": [
+        1040,
+        0
+      ]
     },
     {
       "parameters": {
@@ -86,15 +111,25 @@
         "url": "={{$json.dalle_thumbnail_url}}",
         "options": {
           "timeout": 120000,
-          "response": { "response": { "responseFormat": "file" } }
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
         }
       },
       "id": "download_thumbnail",
       "name": "Download Thumbnail",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1300, -100],
-      "continueOnFail": true
+      "position": [
+        1300,
+        -100
+      ],
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
     },
     {
       "parameters": {
@@ -105,7 +140,10 @@
       "name": "Prepare Thumbnail Upload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1560, -100]
+      "position": [
+        1560,
+        -100
+      ]
     },
     {
       "parameters": {
@@ -122,7 +160,10 @@
       "name": "Upload Ready?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1820, -100]
+      "position": [
+        1820,
+        -100
+      ]
     },
     {
       "parameters": {
@@ -140,7 +181,10 @@
       "name": "Cloudinary Provider?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [2080, -100]
+      "position": [
+        2080,
+        -100
+      ]
     },
     {
       "parameters": {
@@ -157,7 +201,10 @@
       "name": "Use Unsigned Upload?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [2340, -200]
+      "position": [
+        2340,
+        -200
+      ]
     },
     {
       "parameters": {
@@ -167,21 +214,38 @@
         "bodyContentType": "multipart-form-data",
         "bodyParametersUi": {
           "parameter": [
-            { "name": "upload_preset", "value": "={{$json.cloudinary_upload_preset}}" },
-            { "name": "folder", "value": "={{$json.cloudinary_folder}}" },
-            { "name": "public_id", "value": "={{$json.cloudinary_public_id}}" }
+            {
+              "name": "upload_preset",
+              "value": "={{$json.cloudinary_upload_preset}}"
+            },
+            {
+              "name": "folder",
+              "value": "={{$json.cloudinary_folder}}"
+            },
+            {
+              "name": "public_id",
+              "value": "={{$json.cloudinary_public_id}}"
+            }
           ]
         },
         "sendBinaryData": true,
         "binaryPropertyName": "file",
-        "options": { "timeout": 180000 }
+        "options": {
+          "timeout": 180000
+        }
       },
       "id": "upload_cloudinary_unsigned",
       "name": "Upload Thumbnail (Cloudinary Unsigned)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [2600, -300],
-      "continueOnFail": true
+      "position": [
+        2600,
+        -300
+      ],
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
     },
     {
       "parameters": {
@@ -191,23 +255,46 @@
         "bodyContentType": "multipart-form-data",
         "bodyParametersUi": {
           "parameter": [
-            { "name": "timestamp", "value": "={{$json.cloudinary_timestamp}}" },
-            { "name": "api_key", "value": "={{$env.CLOUDINARY_API_KEY}}" },
-            { "name": "signature", "value": "={{$json.cloudinary_signature}}" },
-            { "name": "folder", "value": "={{$json.cloudinary_folder}}" },
-            { "name": "public_id", "value": "={{$json.cloudinary_public_id}}" }
+            {
+              "name": "timestamp",
+              "value": "={{$json.cloudinary_timestamp}}"
+            },
+            {
+              "name": "api_key",
+              "value": "={{$env.CLOUDINARY_API_KEY}}"
+            },
+            {
+              "name": "signature",
+              "value": "={{$json.cloudinary_signature}}"
+            },
+            {
+              "name": "folder",
+              "value": "={{$json.cloudinary_folder}}"
+            },
+            {
+              "name": "public_id",
+              "value": "={{$json.cloudinary_public_id}}"
+            }
           ]
         },
         "sendBinaryData": true,
         "binaryPropertyName": "file",
-        "options": { "timeout": 180000 }
+        "options": {
+          "timeout": 180000
+        }
       },
       "id": "upload_cloudinary_signed",
       "name": "Upload Thumbnail (Cloudinary Signed)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [2600, -100],
-      "continueOnFail": true
+      "position": [
+        2600,
+        -100
+      ],
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
     },
     {
       "parameters": {
@@ -216,21 +303,32 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "={{$env.STORAGE_AUTH_HEADER}}" }
+            {
+              "name": "Authorization",
+              "value": "={{$env.STORAGE_AUTH_HEADER}}"
+            }
           ]
         },
         "sendBody": true,
         "bodyContentType": "multipart-form-data",
         "sendBinaryData": true,
         "binaryPropertyName": "file",
-        "options": { "timeout": 180000 }
+        "options": {
+          "timeout": 180000
+        }
       },
       "id": "upload_generic_http",
       "name": "Upload Thumbnail (Generic HTTP)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [2340, 100],
-      "continueOnFail": true
+      "position": [
+        2340,
+        100
+      ],
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
     },
     {
       "parameters": {
@@ -241,47 +339,192 @@
       "name": "Process Thumbnail",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2860, -100]
+      "position": [
+        2860,
+        -100
+      ]
     }
   ],
   "connections": {
-    "Webhook Trigger": { "main": [[{"node": "Prepare Thumbnail Prompt", "type": "main", "index": 0}]] },
-    "Prepare Thumbnail Prompt": { "main": [[{"node": "Generate Thumbnail", "type": "main", "index": 0}]] },
-    "Generate Thumbnail": { "main": [[{"node": "Prepare Thumbnail Download", "type": "main", "index": 0}]] },
-    "Prepare Thumbnail Download": { "main": [[{"node": "Download Ready?", "type": "main", "index": 0}]] },
-    "Download Ready?": {
+    "Webhook Trigger": {
       "main": [
-        [{"node": "Download Thumbnail", "type": "main", "index": 0}],
-        [{"node": "Process Thumbnail", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Prepare Thumbnail Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
-    "Download Thumbnail": { "main": [[{"node": "Prepare Thumbnail Upload", "type": "main", "index": 0}]] },
-    "Prepare Thumbnail Upload": { "main": [[{"node": "Upload Ready?", "type": "main", "index": 0}]] },
+    "Prepare Thumbnail Prompt": {
+      "main": [
+        [
+          {
+            "node": "Generate Thumbnail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Thumbnail": {
+      "main": [
+        [
+          {
+            "node": "Prepare Thumbnail Download",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Thumbnail Download": {
+      "main": [
+        [
+          {
+            "node": "Download Ready?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Ready?": {
+      "main": [
+        [
+          {
+            "node": "Download Thumbnail",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Process Thumbnail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Thumbnail": {
+      "main": [
+        [
+          {
+            "node": "Prepare Thumbnail Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Thumbnail Upload": {
+      "main": [
+        [
+          {
+            "node": "Upload Ready?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Upload Ready?": {
       "main": [
-        [{"node": "Cloudinary Provider?", "type": "main", "index": 0}],
-        [{"node": "Process Thumbnail", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Cloudinary Provider?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Process Thumbnail",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Cloudinary Provider?": {
       "main": [
-        [{"node": "Use Unsigned Upload?", "type": "main", "index": 0}],
-        [{"node": "Upload Thumbnail (Generic HTTP)", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Use Unsigned Upload?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Upload Thumbnail (Generic HTTP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Use Unsigned Upload?": {
       "main": [
-        [{"node": "Upload Thumbnail (Cloudinary Unsigned)", "type": "main", "index": 0}],
-        [{"node": "Upload Thumbnail (Cloudinary Signed)", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Upload Thumbnail (Cloudinary Unsigned)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Upload Thumbnail (Cloudinary Signed)",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
-    "Upload Thumbnail (Cloudinary Unsigned)": { "main": [[{"node": "Process Thumbnail", "type": "main", "index": 0}]] },
-    "Upload Thumbnail (Cloudinary Signed)": { "main": [[{"node": "Process Thumbnail", "type": "main", "index": 0}]] },
-    "Upload Thumbnail (Generic HTTP)": { "main": [[{"node": "Process Thumbnail", "type": "main", "index": 0}]] }
+    "Upload Thumbnail (Cloudinary Unsigned)": {
+      "main": [
+        [
+          {
+            "node": "Process Thumbnail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Thumbnail (Cloudinary Signed)": {
+      "main": [
+        [
+          {
+            "node": "Process Thumbnail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Thumbnail (Generic HTTP)": {
+      "main": [
+        [
+          {
+            "node": "Process Thumbnail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
   "active": false,
-  "settings": { "executionOrder": "v1" },
+  "settings": {
+    "executionOrder": "v1"
+  },
   "versionId": "yt-studio-wf-08-v1",
-  "meta": { "templateCredsSetupCompleted": true },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
   "id": "wf-08"
 }

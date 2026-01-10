@@ -6,13 +6,18 @@
         "httpMethod": "POST",
         "path": "wf-02-trend",
         "responseMode": "lastNode",
-        "options": { "responseData": "firstEntryJson" }
+        "options": {
+          "responseData": "firstEntryJson"
+        }
       },
       "id": "trigger",
       "name": "Webhook Trigger",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [0, 0],
+      "position": [
+        0,
+        0
+      ],
       "webhookId": "wf-02-trend"
     },
     {
@@ -24,19 +29,27 @@
       "name": "Prepare Search",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [260, 0]
+      "position": [
+        260,
+        0
+      ]
     },
     {
       "parameters": {
         "method": "GET",
         "url": "=https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&chart=mostPopular&regionCode={{$json.target_region}}&videoCategoryId={{$json.category === 'gaming' ? '20' : $json.category === 'education' ? '27' : '22'}}&maxResults=10&key={{$env.YOUTUBE_API_KEY}}",
-        "options": { "timeout": 30000 }
+        "options": {
+          "timeout": 30000
+        }
       },
       "id": "youtube_trending",
       "name": "Get YouTube Trending",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [520, 0],
+      "position": [
+        520,
+        0
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 1000,
@@ -45,13 +58,16 @@
     {
       "parameters": {
         "language": "javascript",
-        "code": "const input = $node['Prepare Search'].json;\nconst ytResponse = $json;\n\nlet trendingVideos = [];\nlet extractedTopics = [];\n\nif (ytResponse.items && Array.isArray(ytResponse.items)) {\n  trendingVideos = ytResponse.items.map(video => ({\n    title: video.snippet?.title,\n    channel: video.snippet?.channelTitle,\n    views: parseInt(video.statistics?.viewCount || 0),\n    likes: parseInt(video.statistics?.likeCount || 0),\n    published: video.snippet?.publishedAt\n  }));\n  \n  // Extract common themes/topics from titles\n  const allWords = trendingVideos\n    .map(v => v.title.toLowerCase())\n    .join(' ')\n    .split(/\\s+/)\n    .filter(w => w.length > 4);\n  \n  const wordFreq = {};\n  allWords.forEach(w => { wordFreq[w] = (wordFreq[w] || 0) + 1; });\n  \n  extractedTopics = Object.entries(wordFreq)\n    .sort((a, b) => b[1] - a[1])\n    .slice(0, 10)\n    .map(([word]) => word);\n}\n\nreturn [{\n  json: {\n    ...input,\n    trending_videos: trendingVideos,\n    extracted_topics: extractedTopics\n  }\n}];"
+        "code": "const input = $node['Prepare Search'].json;\nconst ytResponse = $json;\n\nconst statusCode = ytResponse.statusCode || ytResponse.error?.code;\nif (statusCode && statusCode >= 400) {\n  const errorCode = statusCode === 429\n    ? 'FAILED_YT_TREND_RATE_LIMIT'\n    : (statusCode >= 500 ? 'FAILED_YT_TREND_UPSTREAM' : 'FAILED_YT_TREND_REQUEST');\n\n  return [{\n    json: {\n      ...input,\n      error: true,\n      error_code: errorCode,\n      error_message: ytResponse.error?.message || ytResponse.message || 'YouTube trending request failed',\n      status: errorCode\n    }\n  }];\n}\n\nlet trendingVideos = [];\nlet extractedTopics = [];\n\nif (ytResponse.items && Array.isArray(ytResponse.items)) {\n  trendingVideos = ytResponse.items.map(video => ({\n    title: video.snippet?.title,\n    channel: video.snippet?.channelTitle,\n    views: parseInt(video.statistics?.viewCount || 0),\n    likes: parseInt(video.statistics?.likeCount || 0),\n    published: video.snippet?.publishedAt\n  }));\n  \n  // Extract common themes/topics from titles\n  const allWords = trendingVideos\n    .map(v => v.title.toLowerCase())\n    .join(' ')\n    .split(/\\s+/)\n    .filter(w => w.length > 4);\n  \n  const wordFreq = {};\n  allWords.forEach(w => { wordFreq[w] = (wordFreq[w] || 0) + 1; });\n  \n  extractedTopics = Object.entries(wordFreq)\n    .sort((a, b) => b[1] - a[1])\n    .slice(0, 10)\n    .map(([word]) => word);\n}\n\nreturn [{\n  json: {\n    ...input,\n    trending_videos: trendingVideos,\n    extracted_topics: extractedTopics\n  }\n}];"
       },
       "id": "analyze_trending",
       "name": "Analyze Trending",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [780, 0]
+      "position": [
+        780,
+        0
+      ]
     },
     {
       "parameters": {
@@ -60,20 +76,31 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "=Bearer {{$env.OPENAI_API_KEY}}" },
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.OPENAI_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"model\": \"gpt-4o-mini\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a YouTube trend analyst. Analyze trending data and suggest the best video topic that will get high views and CPM.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Based on this trending data for category {{$json.category}}:\\n\\nTrending videos: {{JSON.stringify($json.trending_videos.slice(0,5))}}\\n\\nExtracted topics: {{$json.extracted_topics.join(', ')}}\\n\\nSearch terms: {{$json.search_terms.join(', ')}}\\n\\nSuggest ONE specific video topic that:\\n1. Is trending but not oversaturated\\n2. Has high CPM potential (target: US, UK, CA, AU)\\n3. Can be made as a faceless video\\n4. Is evergreen or has lasting appeal\\n\\nRespond in JSON format:\\n{\\n  \\\"topic\\\": \\\"exact video topic\\\",\\n  \\\"keywords\\\": [\\\"keyword1\\\", \\\"keyword2\\\", ...],\\n  \\\"estimated_cpm\\\": number,\\n  \\\"competition_level\\\": \\\"low\\\" | \\\"medium\\\" | \\\"high\\\",\\n  \\\"trending_score\\\": 1-100,\\n  \\\"reasoning\\\": \\\"why this topic\\\"\\n}\"\n    }\n  ],\n  \"max_tokens\": 500,\n  \"temperature\": 0.7\n}",
-        "options": { "timeout": 60000 }
+        "options": {
+          "timeout": 60000
+        }
       },
       "id": "ai_analysis",
       "name": "AI Topic Analysis",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1040, 0],
+      "position": [
+        1040,
+        0
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 2000,
@@ -82,25 +109,82 @@
     {
       "parameters": {
         "language": "javascript",
-        "code": "const input = $node['Analyze Trending'].json;\nconst aiResponse = $json;\nconst now = new Date().toISOString();\n\nlet analysis = {\n  selected_topic: input.search_terms[0],\n  keywords: input.search_terms,\n  estimated_cpm: 15.0,\n  competition_level: 'medium',\n  trending_score: 70,\n  reasoning: 'Default topic based on category'\n};\n\ntry {\n  if (aiResponse.choices && aiResponse.choices[0]?.message?.content) {\n    const content = aiResponse.choices[0].message.content;\n    // Try to parse JSON from response\n    const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      analysis = JSON.parse(jsonMatch[0]);\n    }\n  }\n} catch (e) {\n  // Use default analysis\n}\n\nreturn [{\n  json: {\n    run_id: input.run_id,\n    mode: input.mode,\n    category: input.category,\n    language: input.language,\n    \n    // Trend analysis results\n    selected_topic: analysis.topic || analysis.selected_topic,\n    keywords: analysis.keywords || input.search_terms,\n    estimated_cpm: analysis.estimated_cpm || 15.0,\n    competition_level: analysis.competition_level || 'medium',\n    trending_score: analysis.trending_score || 70,\n    \n    // Additional context\n    trend_analysis: {\n      trending_videos: input.trending_videos,\n      extracted_topics: input.extracted_topics,\n      ai_reasoning: analysis.reasoning\n    },\n    \n    analyzed_at: now,\n    status: 'TREND_ANALYZED'\n  }\n}];"
+        "code": "const input = $node['Analyze Trending'].json;\nconst aiResponse = $json;\nconst now = new Date().toISOString();\n\nif (input.error) {\n  return [{ json: input }];\n}\n\nconst statusCode = aiResponse.statusCode || aiResponse.error?.code;\nif (statusCode && statusCode >= 400) {\n  const errorCode = statusCode === 429\n    ? 'FAILED_OPENAI_RATE_LIMIT'\n    : (statusCode >= 500 ? 'FAILED_OPENAI_UPSTREAM' : 'FAILED_OPENAI_REQUEST');\n\n  return [{\n    json: {\n      run_id: input.run_id,\n      mode: input.mode,\n      category: input.category,\n      language: input.language,\n      error: true,\n      error_code: errorCode,\n      error_message: aiResponse.error?.message || aiResponse.message || 'OpenAI trend analysis failed',\n      status: errorCode\n    }\n  }];\n}\n\nlet analysis = {\n  selected_topic: input.search_terms[0],\n  keywords: input.search_terms,\n  estimated_cpm: 15.0,\n  competition_level: 'medium',\n  trending_score: 70,\n  reasoning: 'Default topic based on category'\n};\n\ntry {\n  if (aiResponse.choices && aiResponse.choices[0]?.message?.content) {\n    const content = aiResponse.choices[0].message.content;\n    // Try to parse JSON from response\n    const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      analysis = JSON.parse(jsonMatch[0]);\n    }\n  }\n} catch (e) {\n  // Use default analysis\n}\n\nreturn [{\n  json: {\n    run_id: input.run_id,\n    mode: input.mode,\n    category: input.category,\n    language: input.language,\n    \n    // Trend analysis results\n    selected_topic: analysis.topic || analysis.selected_topic,\n    keywords: analysis.keywords || input.search_terms,\n    estimated_cpm: analysis.estimated_cpm || 15.0,\n    competition_level: analysis.competition_level || 'medium',\n    trending_score: analysis.trending_score || 70,\n    \n    // Additional context\n    trend_analysis: {\n      trending_videos: input.trending_videos,\n      extracted_topics: input.extracted_topics,\n      ai_reasoning: analysis.reasoning\n    },\n    \n    analyzed_at: now,\n    status: 'TREND_ANALYZED'\n  }\n}];"
       },
       "id": "build_response",
       "name": "Build Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1300, 0]
+      "position": [
+        1300,
+        0
+      ]
     }
   ],
   "connections": {
-    "Webhook Trigger": { "main": [[{"node": "Prepare Search", "type": "main", "index": 0}]] },
-    "Prepare Search": { "main": [[{"node": "Get YouTube Trending", "type": "main", "index": 0}]] },
-    "Get YouTube Trending": { "main": [[{"node": "Analyze Trending", "type": "main", "index": 0}]] },
-    "Analyze Trending": { "main": [[{"node": "AI Topic Analysis", "type": "main", "index": 0}]] },
-    "AI Topic Analysis": { "main": [[{"node": "Build Response", "type": "main", "index": 0}]] }
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prepare Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Search": {
+      "main": [
+        [
+          {
+            "node": "Get YouTube Trending",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get YouTube Trending": {
+      "main": [
+        [
+          {
+            "node": "Analyze Trending",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Trending": {
+      "main": [
+        [
+          {
+            "node": "AI Topic Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Topic Analysis": {
+      "main": [
+        [
+          {
+            "node": "Build Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
   "active": false,
-  "settings": { "executionOrder": "v1" },
+  "settings": {
+    "executionOrder": "v1"
+  },
   "versionId": "yt-studio-wf-02-v1",
-  "meta": { "templateCredsSetupCompleted": true },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
   "id": "wf-02"
 }

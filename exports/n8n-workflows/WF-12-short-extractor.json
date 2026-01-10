@@ -6,13 +6,18 @@
         "httpMethod": "POST",
         "path": "wf-12-short-extractor",
         "responseMode": "lastNode",
-        "options": { "responseData": "firstEntryJson" }
+        "options": {
+          "responseData": "firstEntryJson"
+        }
       },
       "id": "trigger",
       "name": "Webhook Trigger",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [0, 0],
+      "position": [
+        0,
+        0
+      ],
       "webhookId": "wf-12-short-extractor"
     },
     {
@@ -24,19 +29,27 @@
       "name": "Validate Source URL",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [260, 0]
+      "position": [
+        260,
+        0
+      ]
     },
     {
       "parameters": {
         "method": "GET",
         "url": "=https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id={{$json.source_video_id}}&key={{$env.YOUTUBE_API_KEY}}",
-        "options": { "timeout": 30000 }
+        "options": {
+          "timeout": 30000
+        }
       },
       "id": "get_video_info",
       "name": "Get Video Info",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [520, 0],
+      "position": [
+        520,
+        0
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 1000,
@@ -45,13 +58,16 @@
     {
       "parameters": {
         "language": "javascript",
-        "code": "const input = $node['Validate Source URL'].json;\nconst ytResponse = $json;\n\nif (!ytResponse.items || ytResponse.items.length === 0) {\n  return [{\n    json: {\n      ...input,\n      error: true,\n      error_message: 'Video not found or not accessible',\n      status: 'FAILED'\n    }\n  }];\n}\n\nconst video = ytResponse.items[0];\nconst snippet = video.snippet || {};\nconst contentDetails = video.contentDetails || {};\n\n// Parse duration (ISO 8601 format: PT#H#M#S)\nconst durationStr = contentDetails.duration || 'PT0S';\nconst durationMatch = durationStr.match(/PT(?:(\\d+)H)?(?:(\\d+)M)?(?:(\\d+)S)?/);\nconst hours = parseInt(durationMatch?.[1] || 0);\nconst minutes = parseInt(durationMatch?.[2] || 0);\nconst seconds = parseInt(durationMatch?.[3] || 0);\nconst totalSeconds = hours * 3600 + minutes * 60 + seconds;\n\nreturn [{\n  json: {\n    ...input,\n    source_video: {\n      id: input.source_video_id,\n      title: snippet.title,\n      description: snippet.description,\n      channel: snippet.channelTitle,\n      duration_seconds: totalSeconds,\n      tags: snippet.tags || [],\n      category_id: snippet.categoryId\n    }\n  }\n}];"
+        "code": "const input = $node['Validate Source URL'].json;\nconst ytResponse = $json;\n\nconst statusCode = ytResponse.statusCode || ytResponse.error?.code;\nif (statusCode && statusCode >= 400) {\n  const errorCode = statusCode === 429\n    ? 'FAILED_YT_RATE_LIMIT'\n    : (statusCode >= 500 ? 'FAILED_YT_UPSTREAM' : 'FAILED_YT_REQUEST');\n\n  return [{\n    json: {\n      ...input,\n      error: true,\n      error_code: errorCode,\n      error_message: ytResponse.error?.message || ytResponse.message || 'YouTube video lookup failed',\n      status: errorCode\n    }\n  }];\n}\n\nif (!ytResponse.items || ytResponse.items.length === 0) {\n  return [{\n    json: {\n      ...input,\n      error: true,\n      error_message: 'Video not found or not accessible',\n      status: 'FAILED_YT_NOT_FOUND'\n    }\n  }];\n}\n\nconst video = ytResponse.items[0];\nconst snippet = video.snippet || {};\nconst contentDetails = video.contentDetails || {};\n\n// Parse duration (ISO 8601 format: PT#H#M#S)\nconst durationStr = contentDetails.duration || 'PT0S';\nconst durationMatch = durationStr.match(/PT(?:(\\d+)H)?(?:(\\d+)M)?(?:(\\d+)S)?/);\nconst hours = parseInt(durationMatch?.[1] || 0);\nconst minutes = parseInt(durationMatch?.[2] || 0);\nconst seconds = parseInt(durationMatch?.[3] || 0);\nconst totalSeconds = hours * 3600 + minutes * 60 + seconds;\n\nreturn [{\n  json: {\n    ...input,\n    source_video: {\n      id: input.source_video_id,\n      title: snippet.title,\n      description: snippet.description,\n      channel: snippet.channelTitle,\n      duration_seconds: totalSeconds,\n      tags: snippet.tags || [],\n      category_id: snippet.categoryId\n    }\n  }\n}];"
       },
       "id": "parse_video_info",
       "name": "Parse Video Info",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [780, 0]
+      "position": [
+        780,
+        0
+      ]
     },
     {
       "parameters": {
@@ -60,20 +76,31 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "=Bearer {{$env.OPENAI_API_KEY}}" },
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.OPENAI_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"model\": \"gpt-4o-mini\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a video content analyst specializing in identifying viral-worthy moments for YouTube Shorts. Analyze video metadata and suggest optimal timestamps for short clips.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Analyze this video and suggest {{$json.extraction_config.num_shorts}} viral-worthy segments for YouTube Shorts (max {{$json.extraction_config.max_clip_duration}} seconds each):\\n\\nTitle: {{$json.source_video.title}}\\nDuration: {{$json.source_video.duration_seconds}} seconds\\nDescription: {{$json.source_video.description.substring(0, 500)}}\\nTags: {{($json.source_video.tags || []).slice(0, 10).join(', ')}}\\n\\nRespond in JSON format:\\n{\\n  \\\"segments\\\": [\\n    {\\n      \\\"start_time\\\": number (seconds),\\n      \\\"end_time\\\": number (seconds),\\n      \\\"duration\\\": number (seconds),\\n      \\\"hook\\\": \\\"attention-grabbing title for this segment\\\",\\n      \\\"viral_score\\\": 1-100,\\n      \\\"reasoning\\\": \\\"why this segment would work as a Short\\\"\\n    }\\n  ]\\n}\\n\\nFocus on: hooks, surprising moments, valuable tips, emotional peaks, or cliffhangers.\"\n    }\n  ],\n  \"max_tokens\": 1000,\n  \"temperature\": 0.7\n}",
-        "options": { "timeout": 60000 }
+        "options": {
+          "timeout": 60000
+        }
       },
       "id": "analyze_segments",
       "name": "AI Segment Analysis",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1040, 0],
+      "position": [
+        1040,
+        0
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 2000,
@@ -82,19 +109,30 @@
     {
       "parameters": {
         "language": "javascript",
-        "code": "const input = $node['Parse Video Info'].json;\nconst aiResponse = $json;\nconst now = new Date().toISOString();\n\nlet segments = [];\n\ntry {\n  if (aiResponse.choices && aiResponse.choices[0]?.message?.content) {\n    const content = aiResponse.choices[0].message.content;\n    const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      const parsed = JSON.parse(jsonMatch[0]);\n      segments = parsed.segments || [];\n    }\n  }\n} catch (e) {\n  // Use default segments if AI fails\n  const videoDuration = input.source_video.duration_seconds;\n  const segmentDuration = Math.min(60, videoDuration / 3);\n  \n  segments = [\n    {\n      start_time: 0,\n      end_time: segmentDuration,\n      duration: segmentDuration,\n      hook: 'Opening hook',\n      viral_score: 70,\n      reasoning: 'First segment of the video'\n    }\n  ];\n}\n\n// Validate and clean segments\nconst videoDuration = input.source_video.duration_seconds;\nconst validSegments = segments\n  .filter(s => s.start_time >= 0 && s.end_time <= videoDuration && s.duration <= 60)\n  .slice(0, input.extraction_config.num_shorts)\n  .map((s, idx) => ({\n    ...s,\n    segment_id: `seg_${idx + 1}`,\n    source_video_id: input.source_video_id\n  }));\n\nreturn [{\n  json: {\n    run_id: input.run_id,\n    mode: input.mode,\n    source_video: input.source_video,\n    segments: validSegments,\n    total_segments: validSegments.length,\n    extraction_config: input.extraction_config,\n    analyzed_at: now,\n    status: validSegments.length > 0 ? 'SEGMENTS_IDENTIFIED' : 'NO_SEGMENTS_FOUND'\n  }\n}];"
+        "code": "const input = $node['Parse Video Info'].json;\nconst aiResponse = $json;\nconst now = new Date().toISOString();\n\nif (input.error) {\n  return [{ json: input }];\n}\n\nconst statusCode = aiResponse.statusCode || aiResponse.error?.code;\nif (statusCode && statusCode >= 400) {\n  const errorCode = statusCode === 429\n    ? 'FAILED_OPENAI_RATE_LIMIT'\n    : (statusCode >= 500 ? 'FAILED_OPENAI_UPSTREAM' : 'FAILED_OPENAI_REQUEST');\n\n  return [{\n    json: {\n      run_id: input.run_id,\n      mode: input.mode,\n      error: true,\n      error_code: errorCode,\n      error_message: aiResponse.error?.message || aiResponse.message || 'Shorts analysis failed',\n      status: errorCode\n    }\n  }];\n}\n\nlet segments = [];\n\ntry {\n  if (aiResponse.choices && aiResponse.choices[0]?.message?.content) {\n    const content = aiResponse.choices[0].message.content;\n    const jsonMatch = content.match(/\\[[\\s\\S]*\\]/);\n    if (jsonMatch) {\n      segments = JSON.parse(jsonMatch[0]);\n    }\n  }\n} catch (e) {\n  // fallback to empty\n}\n\nconst outputSegments = segments.map((segment, index) => ({\n  ...segment,\n  index: index + 1,\n  source_video_id: input.source_video?.id,\n  source_title: input.source_video?.title\n}));\n\nreturn [{\n  json: {\n    ...input,\n    short_segments: outputSegments,\n    analyzed_at: now,\n    status: 'SHORTS_ANALYZED'\n  }\n}];"
       },
       "id": "process_segments",
       "name": "Process Segments",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1300, 0]
+      "position": [
+        1300,
+        0
+      ]
     },
     {
       "parameters": {
         "operation": "insert",
-        "schema": { "__rl": true, "mode": "list", "value": "public" },
-        "table": { "__rl": true, "mode": "list", "value": "yt_studio_shorts_extraction" },
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "yt_studio_shorts_extraction"
+        },
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
@@ -111,7 +149,10 @@
       "name": "Save Extraction Results",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [1560, 0],
+      "position": [
+        1560,
+        0
+      ],
       "credentials": {
         "postgres": {
           "id": "postgres_yt_studio",
@@ -129,21 +170,98 @@
       "name": "Build Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1820, 0]
+      "position": [
+        1820,
+        0
+      ]
     }
   ],
   "connections": {
-    "Webhook Trigger": { "main": [[{"node": "Validate Source URL", "type": "main", "index": 0}]] },
-    "Validate Source URL": { "main": [[{"node": "Get Video Info", "type": "main", "index": 0}]] },
-    "Get Video Info": { "main": [[{"node": "Parse Video Info", "type": "main", "index": 0}]] },
-    "Parse Video Info": { "main": [[{"node": "AI Segment Analysis", "type": "main", "index": 0}]] },
-    "AI Segment Analysis": { "main": [[{"node": "Process Segments", "type": "main", "index": 0}]] },
-    "Process Segments": { "main": [[{"node": "Save Extraction Results", "type": "main", "index": 0}]] },
-    "Save Extraction Results": { "main": [[{"node": "Build Response", "type": "main", "index": 0}]] }
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Validate Source URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Source URL": {
+      "main": [
+        [
+          {
+            "node": "Get Video Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Video Info": {
+      "main": [
+        [
+          {
+            "node": "Parse Video Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Video Info": {
+      "main": [
+        [
+          {
+            "node": "AI Segment Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Segment Analysis": {
+      "main": [
+        [
+          {
+            "node": "Process Segments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Segments": {
+      "main": [
+        [
+          {
+            "node": "Save Extraction Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Extraction Results": {
+      "main": [
+        [
+          {
+            "node": "Build Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
   "active": false,
-  "settings": { "executionOrder": "v1" },
+  "settings": {
+    "executionOrder": "v1"
+  },
   "versionId": "yt-studio-wf-12-v1",
-  "meta": { "templateCredsSetupCompleted": true },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
   "id": "wf-12"
 }

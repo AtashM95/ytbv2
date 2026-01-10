@@ -1,7 +1,7 @@
 {
   "test_mode_simple": {
     "description": "Simple test mode request to verify pipeline",
-    "endpoint": "POST /webhook/main-router",
+    "endpoint": "POST /webhook/wf-00-main-router",
     "payload": {
       "mode": "test",
       "category": "education",
@@ -12,7 +12,7 @@
 
   "test_mode_full": {
     "description": "Full test mode request with all options",
-    "endpoint": "POST /webhook/main-router",
+    "endpoint": "POST /webhook/wf-00-main-router",
     "payload": {
       "mode": "test",
       "video_type": "normal",
@@ -38,7 +38,7 @@
 
   "auto_trend_tech": {
     "description": "Auto-trend mode for tech/AI category",
-    "endpoint": "POST /webhook/main-router",
+    "endpoint": "POST /webhook/wf-00-main-router",
     "payload": {
       "mode": "auto_trend",
       "video_type": "normal",
@@ -63,7 +63,7 @@
 
   "auto_trend_finance": {
     "description": "Auto-trend mode for finance category (high CPM)",
-    "endpoint": "POST /webhook/main-router",
+    "endpoint": "POST /webhook/wf-00-main-router",
     "payload": {
       "mode": "auto_trend",
       "video_type": "normal",
@@ -88,7 +88,7 @@
 
   "manual_mode_education": {
     "description": "Manual mode with specific topic",
-    "endpoint": "POST /webhook/main-router",
+    "endpoint": "POST /webhook/wf-00-main-router",
     "payload": {
       "mode": "manual",
       "video_type": "normal",
@@ -113,7 +113,7 @@
 
   "short_video": {
     "description": "Create YouTube Short (under 60 seconds)",
-    "endpoint": "POST /webhook/main-router",
+    "endpoint": "POST /webhook/wf-00-main-router",
     "payload": {
       "mode": "manual",
       "video_type": "short",
@@ -134,7 +134,7 @@
 
   "both_normal_and_short": {
     "description": "Create both normal video and short version",
-    "endpoint": "POST /webhook/main-router",
+    "endpoint": "POST /webhook/wf-00-main-router",
     "payload": {
       "mode": "manual",
       "video_type": "both",
@@ -160,7 +160,7 @@
 
   "short_from_long_video": {
     "description": "Extract shorts from existing YouTube video",
-    "endpoint": "POST /webhook/main-router",
+    "endpoint": "POST /webhook/wf-00-main-router",
     "payload": {
       "mode": "auto_trend",
       "video_type": "short_from_long",
@@ -172,7 +172,7 @@
 
   "multilingual_arabic": {
     "description": "Arabic language video for Middle East",
-    "endpoint": "POST /webhook/main-router",
+    "endpoint": "POST /webhook/wf-00-main-router",
     "payload": {
       "mode": "manual",
       "video_type": "normal",
@@ -192,7 +192,7 @@
 
   "multilingual_turkish": {
     "description": "Turkish language video",
-    "endpoint": "POST /webhook/main-router",
+    "endpoint": "POST /webhook/wf-00-main-router",
     "payload": {
       "mode": "manual",
       "video_type": "normal",
@@ -212,7 +212,7 @@
 
   "gaming_category": {
     "description": "Gaming category video",
-    "endpoint": "POST /webhook/main-router",
+    "endpoint": "POST /webhook/wf-00-main-router",
     "payload": {
       "mode": "auto_trend",
       "video_type": "normal",
@@ -236,7 +236,7 @@
 
   "custom_category": {
     "description": "Custom category with specific topic",
-    "endpoint": "POST /webhook/main-router",
+    "endpoint": "POST /webhook/wf-00-main-router",
     "payload": {
       "mode": "manual",
       "video_type": "normal",
@@ -261,7 +261,7 @@
 
   "scheduled_publish": {
     "description": "Schedule video for optimal publish time",
-    "endpoint": "POST /webhook/main-router",
+    "endpoint": "POST /webhook/wf-00-main-router",
     "payload": {
       "mode": "manual",
       "video_type": "normal",

@@ -8,7 +8,7 @@ http://your-n8n-instance:5678/webhook
 
 ## Main Endpoints
 
-### POST /main-router
+### POST /wf-00-main-router
 
 Main entry point for all video creation requests.
 

@@ -6,13 +6,18 @@
         "httpMethod": "POST",
         "path": "wf-06-assets",
         "responseMode": "lastNode",
-        "options": { "responseData": "firstEntryJson" }
+        "options": {
+          "responseData": "firstEntryJson"
+        }
       },
       "id": "trigger",
       "name": "Webhook Trigger",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [0, 0],
+      "position": [
+        0,
+        0
+      ],
       "webhookId": "wf-06-assets"
     },
     {
@@ -24,7 +29,10 @@
       "name": "Prepare Asset Requests",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [260, 0]
+      "position": [
+        260,
+        0
+      ]
     },
     {
       "parameters": {
@@ -35,7 +43,10 @@
       "name": "Process Each Scene",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
-      "position": [520, 0]
+      "position": [
+        520,
+        0
+      ]
     },
     {
       "parameters": {
@@ -46,7 +57,10 @@
       "name": "Get Current Scene",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [780, 0]
+      "position": [
+        780,
+        0
+      ]
     },
     {
       "parameters": {
@@ -55,16 +69,24 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "={{$env.PEXELS_API_KEY}}" }
+            {
+              "name": "Authorization",
+              "value": "={{$env.PEXELS_API_KEY}}"
+            }
           ]
         },
-        "options": { "timeout": 30000 }
+        "options": {
+          "timeout": 30000
+        }
       },
       "id": "pexels_video",
       "name": "Search Pexels Videos",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1040, -100],
+      "position": [
+        1040,
+        -100
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 1000,
@@ -73,13 +95,16 @@
     {
       "parameters": {
         "language": "javascript",
-        "code": "const input = $node['Get Current Scene'].json;\nconst pexelsResponse = $json;\n\nlet videoFound = false;\nlet assetUrl = null;\nlet assetData = null;\n\nif (pexelsResponse.videos && pexelsResponse.videos.length > 0) {\n  // Find best quality video file\n  const video = pexelsResponse.videos[0];\n  const videoFiles = video.video_files || [];\n  \n  // Prefer HD quality\n  const hdFile = videoFiles.find(f => f.quality === 'hd' && f.width >= 1280) ||\n                 videoFiles.find(f => f.quality === 'sd') ||\n                 videoFiles[0];\n  \n  if (hdFile) {\n    videoFound = true;\n    assetUrl = hdFile.link;\n    assetData = {\n      source: 'pexels_video',\n      pexels_id: video.id,\n      width: hdFile.width,\n      height: hdFile.height,\n      duration: video.duration,\n      photographer: video.user?.name || 'Pexels'\n    };\n  }\n}\n\nreturn [{\n  json: {\n    ...input,\n    video_found: videoFound,\n    asset_url: assetUrl,\n    asset_data: assetData\n  }\n}];"
+        "code": "const input = $node['Get Current Scene'].json;\nconst pexelsResponse = $json;\n\nconst statusCode = pexelsResponse.statusCode || pexelsResponse.error?.code;\nif (statusCode && statusCode >= 400) {\n  const errorCode = statusCode === 429\n    ? 'FAILED_PEXELS_VIDEO_RATE_LIMIT'\n    : (statusCode >= 500 ? 'FAILED_PEXELS_VIDEO_UPSTREAM' : 'FAILED_PEXELS_VIDEO_REQUEST');\n\n  return [{\n    json: {\n      ...input,\n      error: true,\n      error_code: errorCode,\n      error_message: pexelsResponse.error?.message || pexelsResponse.message || 'Pexels video search failed',\n      status: errorCode\n    }\n  }];\n}\n\nlet videoFound = false;\nlet assetUrl = null;\nlet assetData = null;\n\nif (pexelsResponse.videos && pexelsResponse.videos.length > 0) {\n  // Find best quality video file\n  const video = pexelsResponse.videos[0];\n  const videoFiles = video.video_files || [];\n  \n  // Prefer HD quality\n  const hdFile = videoFiles.find(f => f.quality === 'hd' && f.width >= 1280) ||\n                 videoFiles.find(f => f.quality === 'sd') ||\n                 videoFiles[0];\n  \n  if (hdFile) {\n    videoFound = true;\n    assetUrl = hdFile.link;\n    assetData = {\n      source: 'pexels_video',\n      pexels_id: video.id,\n      width: hdFile.width,\n      height: hdFile.height,\n      duration: video.duration,\n      photographer: video.user?.name || 'Pexels'\n    };\n  }\n}\n\nreturn [{\n  json: {\n    ...input,\n    video_found: videoFound,\n    asset_url: assetUrl,\n    asset_data: assetData\n  }\n}];"
       },
       "id": "check_video",
       "name": "Check Video Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1300, -100]
+      "position": [
+        1300,
+        -100
+      ]
     },
     {
       "parameters": {
@@ -96,7 +121,10 @@
       "name": "Video Found?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1560, -100]
+      "position": [
+        1560,
+        -100
+      ]
     },
     {
       "parameters": {
@@ -105,16 +133,24 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "={{$env.PEXELS_API_KEY}}" }
+            {
+              "name": "Authorization",
+              "value": "={{$env.PEXELS_API_KEY}}"
+            }
           ]
         },
-        "options": { "timeout": 30000 }
+        "options": {
+          "timeout": 30000
+        }
       },
       "id": "pexels_photo",
       "name": "Search Pexels Photos",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1820, 0],
+      "position": [
+        1820,
+        0
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 1000,
@@ -123,13 +159,16 @@
     {
       "parameters": {
         "language": "javascript",
-        "code": "const input = $node['Check Video Result'].json;\nconst pexelsResponse = $json;\n\nlet photoFound = false;\nlet assetUrl = null;\nlet assetData = null;\n\nif (pexelsResponse.photos && pexelsResponse.photos.length > 0) {\n  const photo = pexelsResponse.photos[0];\n  \n  // Use large2x or large size\n  assetUrl = photo.src?.large2x || photo.src?.large || photo.src?.original;\n  \n  if (assetUrl) {\n    photoFound = true;\n    assetData = {\n      source: 'pexels_photo',\n      pexels_id: photo.id,\n      width: photo.width,\n      height: photo.height,\n      photographer: photo.photographer || 'Pexels'\n    };\n  }\n}\n\nreturn [{\n  json: {\n    ...input,\n    photo_found: photoFound,\n    asset_url: photoFound ? assetUrl : input.asset_url,\n    asset_data: photoFound ? assetData : input.asset_data,\n    fallback_used: photoFound ? 'pexels_photo' : null\n  }\n}];"
+        "code": "const input = $node['Get Current Scene'].json;\nconst pexelsResponse = $json;\n\nconst statusCode = pexelsResponse.statusCode || pexelsResponse.error?.code;\nif (statusCode && statusCode >= 400) {\n  const errorCode = statusCode === 429\n    ? 'FAILED_PEXELS_PHOTO_RATE_LIMIT'\n    : (statusCode >= 500 ? 'FAILED_PEXELS_PHOTO_UPSTREAM' : 'FAILED_PEXELS_PHOTO_REQUEST');\n\n  return [{\n    json: {\n      ...input,\n      error: true,\n      error_code: errorCode,\n      error_message: pexelsResponse.error?.message || pexelsResponse.message || 'Pexels photo search failed',\n      status: errorCode\n    }\n  }];\n}\n\nlet photoFound = false;\nlet assetUrl = null;\nlet assetData = null;\n\nif (pexelsResponse.photos && pexelsResponse.photos.length > 0) {\n  const photo = pexelsResponse.photos[0];\n  photoFound = true;\n  assetUrl = photo.src?.large || photo.src?.original;\n  assetData = {\n    source: 'pexels_photo',\n    pexels_id: photo.id,\n    width: photo.width,\n    height: photo.height,\n    photographer: photo.photographer || 'Pexels'\n  };\n}\n\nreturn [{\n  json: {\n    ...input,\n    photo_found: photoFound,\n    asset_url: assetUrl,\n    asset_data: assetData\n  }\n}];"
       },
       "id": "check_photo",
       "name": "Check Photo Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2080, 0]
+      "position": [
+        2080,
+        0
+      ]
     },
     {
       "parameters": {
@@ -146,7 +185,10 @@
       "name": "Photo Found?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [2340, 0]
+      "position": [
+        2340,
+        0
+      ]
     },
     {
       "parameters": {
@@ -155,20 +197,31 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "=Bearer {{$env.OPENAI_API_KEY}}" },
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.OPENAI_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"model\": \"dall-e-3\",\n  \"prompt\": \"Cinematic wide shot, professional video background: {{$json.current_request.original_description}}. Photorealistic, 16:9 aspect ratio, suitable for YouTube video, no text or watermarks.\",\n  \"n\": 1,\n  \"size\": \"1792x1024\",\n  \"quality\": \"standard\"\n}",
-        "options": { "timeout": 120000 }
+        "options": {
+          "timeout": 120000
+        }
       },
       "id": "dalle",
       "name": "Generate DALL-E Image",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [2600, 100],
+      "position": [
+        2600,
+        100
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 3000,
@@ -177,25 +230,33 @@
     {
       "parameters": {
         "language": "javascript",
-        "code": "const input = $node['Check Photo Result'].json;\nconst dalleResponse = $json;\n\nlet assetUrl = null;\nlet assetData = null;\n\nif (dalleResponse.data && dalleResponse.data[0]?.url) {\n  assetUrl = dalleResponse.data[0].url;\n  assetData = {\n    source: 'dalle',\n    revised_prompt: dalleResponse.data[0].revised_prompt,\n    model: 'dall-e-3'\n  };\n}\n\nreturn [{\n  json: {\n    ...input,\n    asset_url: assetUrl,\n    asset_data: assetData,\n    fallback_used: 'dalle'\n  }\n}];"
+        "code": "const input = $node['Get Current Scene'].json;\nconst dalleResponse = $json;\n\nconst statusCode = dalleResponse.statusCode || dalleResponse.error?.code;\nif (statusCode && statusCode >= 400) {\n  const errorCode = statusCode === 429\n    ? 'FAILED_OPENAI_IMAGE_RATE_LIMIT'\n    : (statusCode >= 500 ? 'FAILED_OPENAI_IMAGE_UPSTREAM' : 'FAILED_OPENAI_IMAGE_REQUEST');\n\n  return [{\n    json: {\n      ...input,\n      error: true,\n      error_code: errorCode,\n      error_message: dalleResponse.error?.message || dalleResponse.message || 'DALL-E image generation failed',\n      status: errorCode\n    }\n  }];\n}\n\nlet imageFound = false;\nlet assetUrl = null;\nlet assetData = null;\n\nif (dalleResponse.data && dalleResponse.data.length > 0) {\n  const image = dalleResponse.data[0];\n  imageFound = true;\n  assetUrl = image.url;\n  assetData = {\n    source: 'dalle_generated',\n    prompt: input.scene_prompt,\n    size: input.image_size\n  };\n}\n\nreturn [{\n  json: {\n    ...input,\n    image_found: imageFound,\n    asset_url: assetUrl,\n    asset_data: assetData\n  }\n}];"
       },
       "id": "check_dalle",
       "name": "Check DALL-E Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2860, 100]
+      "position": [
+        2860,
+        100
+      ]
     },
     {
       "parameters": {
         "mode": "combine",
-        "mergeByFields": { "values": [] },
+        "mergeByFields": {
+          "values": []
+        },
         "options": {}
       },
       "id": "merge_assets",
       "name": "Merge Asset Sources",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3,
-      "position": [3120, 0]
+      "position": [
+        3120,
+        0
+      ]
     },
     {
       "parameters": {
@@ -206,7 +267,10 @@
       "name": "Update Progress",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [3380, 0]
+      "position": [
+        3380,
+        0
+      ]
     },
     {
       "parameters": {
@@ -224,7 +288,10 @@
       "name": "More Scenes?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [3640, 0]
+      "position": [
+        3640,
+        0
+      ]
     },
     {
       "parameters": {
@@ -235,44 +302,207 @@
       "name": "Build Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [3900, 100]
+      "position": [
+        3900,
+        100
+      ]
     }
   ],
   "connections": {
-    "Webhook Trigger": { "main": [[{"node": "Prepare Asset Requests", "type": "main", "index": 0}]] },
-    "Prepare Asset Requests": { "main": [[{"node": "Process Each Scene", "type": "main", "index": 0}]] },
-    "Process Each Scene": { "main": [[{"node": "Get Current Scene", "type": "main", "index": 0}]] },
-    "Get Current Scene": { "main": [[{"node": "Search Pexels Videos", "type": "main", "index": 0}]] },
-    "Search Pexels Videos": { "main": [[{"node": "Check Video Result", "type": "main", "index": 0}]] },
-    "Check Video Result": { "main": [[{"node": "Video Found?", "type": "main", "index": 0}]] },
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prepare Asset Requests",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Asset Requests": {
+      "main": [
+        [
+          {
+            "node": "Process Each Scene",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Each Scene": {
+      "main": [
+        [
+          {
+            "node": "Get Current Scene",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Current Scene": {
+      "main": [
+        [
+          {
+            "node": "Search Pexels Videos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Pexels Videos": {
+      "main": [
+        [
+          {
+            "node": "Check Video Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Video Result": {
+      "main": [
+        [
+          {
+            "node": "Video Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Video Found?": {
       "main": [
-        [{"node": "Merge Asset Sources", "type": "main", "index": 0}],
-        [{"node": "Search Pexels Photos", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Merge Asset Sources",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Search Pexels Photos",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
-    "Search Pexels Photos": { "main": [[{"node": "Check Photo Result", "type": "main", "index": 0}]] },
-    "Check Photo Result": { "main": [[{"node": "Photo Found?", "type": "main", "index": 0}]] },
+    "Search Pexels Photos": {
+      "main": [
+        [
+          {
+            "node": "Check Photo Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Photo Result": {
+      "main": [
+        [
+          {
+            "node": "Photo Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Photo Found?": {
       "main": [
-        [{"node": "Merge Asset Sources", "type": "main", "index": 0}],
-        [{"node": "Generate DALL-E Image", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Merge Asset Sources",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generate DALL-E Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
-    "Generate DALL-E Image": { "main": [[{"node": "Check DALL-E Result", "type": "main", "index": 0}]] },
-    "Check DALL-E Result": { "main": [[{"node": "Merge Asset Sources", "type": "main", "index": 0}]] },
-    "Merge Asset Sources": { "main": [[{"node": "Update Progress", "type": "main", "index": 0}]] },
-    "Update Progress": { "main": [[{"node": "More Scenes?", "type": "main", "index": 0}]] },
+    "Generate DALL-E Image": {
+      "main": [
+        [
+          {
+            "node": "Check DALL-E Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check DALL-E Result": {
+      "main": [
+        [
+          {
+            "node": "Merge Asset Sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Asset Sources": {
+      "main": [
+        [
+          {
+            "node": "Update Progress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Progress": {
+      "main": [
+        [
+          {
+            "node": "More Scenes?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "More Scenes?": {
       "main": [
-        [{"node": "Get Current Scene", "type": "main", "index": 0}],
-        [{"node": "Build Response", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Get Current Scene",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
   "active": false,
-  "settings": { "executionOrder": "v1" },
+  "settings": {
+    "executionOrder": "v1"
+  },
   "versionId": "yt-studio-wf-06-v1",
-  "meta": { "templateCredsSetupCompleted": true },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
   "id": "wf-06"
 }
