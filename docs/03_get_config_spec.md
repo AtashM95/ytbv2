@@ -8,6 +8,9 @@ WF-10 bütün workflow-lar üçün vahid formatda konfiqurasiya qaytarır. Confi
 2. Əvvəl `scope=global`, sonra `scope=channel` (channel_key uyğun olduqda) override edilir.
 3. `credential_ref` və `env_ref` dəyərləri açılmır; yalnız referans qaytarılır.
 4. Default-lar tətbiq edilir və çıxış formatı standartlaşdırılır.
+2. `credential_ref` və `env_ref` dəyərləri açılmır; yalnız referans qaytarılır.
+3. Default-lar tətbiq edilir və çıxış formatı standartlaşdırılır.
+4. Log-larda secret dəyəri yoxdur.
 
 ## Output format
 WF-10 çıxışı aşağıdakı formatdadır (bütün workflow-lara eyni):
@@ -25,6 +28,17 @@ WF-10 çıxışı aşağıdakı formatdadır (bütün workflow-lara eyni):
         "upload_preset": "ytb_unsigned",
         "api_key_ref": { "type": "env_ref", "ref": "CLOUDINARY_API_KEY" },
         "api_secret_ref": { "type": "env_ref", "ref": "CLOUDINARY_API_SECRET" }
+      },
+      "generic_http": {
+        "upload_endpoint": "https://my-uploader/upload",
+        "auth_header_ref": { "type": "env_ref", "ref": "STORAGE_AUTH_HEADER" }
+      }
+    },
+    "tts": {
+      "provider": "acme-tts",
+      "api_key": {
+        "type": "credential_ref",
+        "ref": "cred_tts_api"
       }
     }
   },
@@ -35,11 +49,17 @@ WF-10 çıxışı aşağıdakı formatdadır (bütün workflow-lara eyni):
     "provider": "cloudinary",
     "missing_fields": []
   }
+    "provider": "cloudinary",
+    "is_valid": true,
+    "errors": []
+  },
+  "status": "CONFIG_RESOLVED"
 }
 ```
 
 ## Error handling
 - Invalid environment/scope/channel_key → validation error.
+- Config DB bağlantısı uğursuz olarsa defaults ilə davam edilir.
 - Production modda storage config əskikdirsə `FAILED_CONFIG_STORAGE` qaytarılır.
 - Credential provider unreachable olduqda WF-10 yalnız `credential_ref` qaytarır və warning log yazır.
 

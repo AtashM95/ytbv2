@@ -25,6 +25,10 @@ WF-11 Settings Panel sistemin bütün konfiqurasiyalarını idarə edir. Bu work
 | notes | string | no | Əlavə qeyd |
 | updated_by | string | no | Dəyişiklik edən istifadəçi |
 | updated_at | string | no | Son dəyişiklik zamanı |
+| scope | string | yes | `global`, `channel` |
+| environment | string | yes | `test`, `production` |
+| notes | string | no | Əlavə qeyd |
+| updated_by | string | no | Dəyişiklik edən istifadəçi |
 | is_active | boolean | yes | Aktivlik statusu |
 
 ## Credentials policy
@@ -64,6 +68,7 @@ WF-11 Settings Panel sistemin bütün konfiqurasiyalarını idarə edir. Bu work
 
 ## Audit
 - Hər update `updated_by` və `updated_at` ilə log edilə bilər.
+- Hər update `updated_by` ilə log edilə bilər.
 
 ## Security
 - UI yalnız authorized admin istifadəçilərə açıqdır.
