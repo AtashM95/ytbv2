@@ -45,6 +45,11 @@
 - Upsert conflict target: `environment + scope + channel_key + key`.
 - Secrets yalnız `credential_ref`/`env_ref` kimi saxlanılır.
 
+### WF-11
+- Form input-larına uyğun `key/value` satırları DB-yə yazılır.
+- Upsert conflict target: `key + scope + environment`.
+- Secrets yalnız `credential_ref`/`env_ref` kimi saxlanılır.
+
 ## Contract yoxlamaları
 - Contract field adları dəyişməyib: run_id, mode, scene_assets, voiceover_url_signed, render_id, youtube_video_id, manifest.
 
