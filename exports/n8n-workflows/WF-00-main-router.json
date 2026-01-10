@@ -4,7 +4,7 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "main-router",
+        "path": "wf-00-main-router",
         "responseMode": "lastNode",
         "options": {
           "responseData": "firstEntryJson"
@@ -14,8 +14,11 @@
       "name": "Webhook Trigger",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [0, 0],
-      "webhookId": "main-router"
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "wf-00-main-router"
     },
     {
       "parameters": {
@@ -26,7 +29,10 @@
       "name": "Validate & Normalize",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [260, 0]
+      "position": [
+        260,
+        0
+      ]
     },
     {
       "parameters": {
@@ -43,13 +49,24 @@
       "name": "Has Error?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [520, 0]
+      "position": [
+        520,
+        0
+      ]
     },
     {
       "parameters": {
         "operation": "insert",
-        "schema": { "__rl": true, "mode": "list", "value": "public" },
-        "table": { "__rl": true, "mode": "list", "value": "yt_studio_videos" },
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "yt_studio_videos"
+        },
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
@@ -70,7 +87,10 @@
       "name": "Create Video Record",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [780, 100],
+      "position": [
+        780,
+        100
+      ],
       "credentials": {
         "postgres": {
           "id": "postgres_yt_studio",
@@ -94,7 +114,10 @@
       "name": "Short Extraction?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1040, 100]
+      "position": [
+        1040,
+        100
+      ]
     },
     {
       "parameters": {
@@ -111,7 +134,10 @@
       "name": "Call WF-12 Short Extractor",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1300, 0],
+      "position": [
+        1300,
+        0
+      ],
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 5000,
@@ -132,7 +158,10 @@
       "name": "Needs Trend Analysis?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1300, 200]
+      "position": [
+        1300,
+        200
+      ]
     },
     {
       "parameters": {
@@ -149,7 +178,10 @@
       "name": "Call WF-02 Trend Analyzer",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1560, 100],
+      "position": [
+        1560,
+        100
+      ],
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 2000,
@@ -164,7 +196,10 @@
       "name": "Merge Trend Results",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1820, 100]
+      "position": [
+        1820,
+        100
+      ]
     },
     {
       "parameters": {
@@ -175,19 +210,27 @@
       "name": "Skip Trend Analysis",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1560, 300]
+      "position": [
+        1560,
+        300
+      ]
     },
     {
       "parameters": {
         "mode": "combine",
-        "mergeByFields": { "values": [] },
+        "mergeByFields": {
+          "values": []
+        },
         "options": {}
       },
       "id": "merge_paths",
       "name": "Merge Paths",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3,
-      "position": [2080, 200]
+      "position": [
+        2080,
+        200
+      ]
     },
     {
       "parameters": {
@@ -204,7 +247,10 @@
       "name": "Call WF-01 Orchestrator",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [2340, 200],
+      "position": [
+        2340,
+        200
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 10000,
@@ -219,7 +265,10 @@
       "name": "Build Final Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2600, 200]
+      "position": [
+        2600,
+        200
+      ]
     },
     {
       "parameters": {
@@ -230,56 +279,163 @@
       "name": "Error Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [780, -100]
+      "position": [
+        780,
+        -100
+      ]
     }
   ],
   "connections": {
     "Webhook Trigger": {
-      "main": [[{"node": "Validate & Normalize", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Validate & Normalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Validate & Normalize": {
-      "main": [[{"node": "Has Error?", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Has Error?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Has Error?": {
       "main": [
-        [{"node": "Error Response", "type": "main", "index": 0}],
-        [{"node": "Create Video Record", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Video Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Create Video Record": {
-      "main": [[{"node": "Short Extraction?", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Short Extraction?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Short Extraction?": {
       "main": [
-        [{"node": "Call WF-12 Short Extractor", "type": "main", "index": 0}],
-        [{"node": "Needs Trend Analysis?", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Call WF-12 Short Extractor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Needs Trend Analysis?",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Needs Trend Analysis?": {
       "main": [
-        [{"node": "Call WF-02 Trend Analyzer", "type": "main", "index": 0}],
-        [{"node": "Skip Trend Analysis", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Call WF-02 Trend Analyzer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skip Trend Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Call WF-02 Trend Analyzer": {
-      "main": [[{"node": "Merge Trend Results", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Merge Trend Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Merge Trend Results": {
-      "main": [[{"node": "Merge Paths", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Merge Paths",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Skip Trend Analysis": {
-      "main": [[{"node": "Merge Paths", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Merge Paths",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Merge Paths": {
-      "main": [[{"node": "Call WF-01 Orchestrator", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Call WF-01 Orchestrator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Call WF-01 Orchestrator": {
-      "main": [[{"node": "Build Final Response", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Build Final Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
-  "settings": { "executionOrder": "v1" },
+  "settings": {
+    "executionOrder": "v1"
+  },
   "versionId": "yt-studio-wf-00-v1",
-  "meta": { "templateCredsSetupCompleted": true },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
   "id": "wf-00"
 }

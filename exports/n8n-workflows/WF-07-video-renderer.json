@@ -6,13 +6,18 @@
         "httpMethod": "POST",
         "path": "wf-07-render",
         "responseMode": "lastNode",
-        "options": { "responseData": "firstEntryJson" }
+        "options": {
+          "responseData": "firstEntryJson"
+        }
       },
       "id": "trigger",
       "name": "Webhook Trigger",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [0, 0],
+      "position": [
+        0,
+        0
+      ],
       "webhookId": "wf-07-render"
     },
     {
@@ -24,7 +29,10 @@
       "name": "Prepare Shotstack Timeline",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [260, 0]
+      "position": [
+        260,
+        0
+      ]
     },
     {
       "parameters": {
@@ -33,20 +41,31 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "x-api-key", "value": "={{$json.is_test ? $env.SHOTSTACK_SANDBOX_KEY : $env.SHOTSTACK_API_KEY}}" },
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "x-api-key",
+              "value": "={{$json.is_test ? $env.SHOTSTACK_SANDBOX_KEY : $env.SHOTSTACK_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{JSON.stringify($json.shotstack_payload)}}",
-        "options": { "timeout": 120000 }
+        "options": {
+          "timeout": 120000
+        }
       },
       "id": "submit_render",
       "name": "Submit Render Job",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [520, 0],
+      "position": [
+        520,
+        0
+      ],
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 2000,
@@ -55,13 +74,16 @@
     {
       "parameters": {
         "language": "javascript",
-        "code": "const input = $node['Prepare Shotstack Timeline'].json;\nconst response = $json;\n\nif (response.error || !response.response?.id) {\n  return [{\n    json: {\n      ...input,\n      error: true,\n      error_message: response.error || response.message || 'Failed to submit render job',\n      status: 'FAILED'\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ...input,\n    render_id: response.response.id,\n    render_status: 'queued',\n    poll_count: 0,\n    max_polls: 60\n  }\n}];"
+        "code": "const input = $node['Prepare Shotstack Timeline'].json;\nconst response = $json;\n\nconst statusCode = response.statusCode || response.error?.code;\nif (statusCode && statusCode >= 400) {\n  const errorCode = statusCode === 429\n    ? 'FAILED_RENDER_RATE_LIMIT'\n    : (statusCode >= 500 ? 'FAILED_RENDER_UPSTREAM' : 'FAILED_RENDER_REQUEST');\n\n  return [{\n    json: {\n      ...input,\n      error: true,\n      error_code: errorCode,\n      error_message: response.error?.message || response.message || 'Failed to submit render job',\n      status: errorCode\n    }\n  }];\n}\n\nif (response.error || !response.response?.id) {\n  return [{\n    json: {\n      ...input,\n      error: true,\n      error_message: response.error || response.message || 'Failed to submit render job',\n      status: 'FAILED_RENDER_REQUEST'\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ...input,\n    render_id: response.response.id,\n    render_status: 'queued',\n    poll_count: 0,\n    max_polls: 60\n  }\n}];"
       },
       "id": "get_render_id",
       "name": "Get Render ID",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [780, 0]
+      "position": [
+        780,
+        0
+      ]
     },
     {
       "parameters": {
@@ -72,7 +94,10 @@
       "name": "Wait 5 Seconds",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
-      "position": [1040, 0]
+      "position": [
+        1040,
+        0
+      ]
     },
     {
       "parameters": {
@@ -81,16 +106,24 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "x-api-key", "value": "={{$json.is_test ? $env.SHOTSTACK_SANDBOX_KEY : $env.SHOTSTACK_API_KEY}}" }
+            {
+              "name": "x-api-key",
+              "value": "={{$json.is_test ? $env.SHOTSTACK_SANDBOX_KEY : $env.SHOTSTACK_API_KEY}}"
+            }
           ]
         },
-        "options": { "timeout": 30000 }
+        "options": {
+          "timeout": 30000
+        }
       },
       "id": "check_status",
       "name": "Check Render Status",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1300, 0],
+      "position": [
+        1300,
+        0
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 2000,
@@ -99,13 +132,16 @@
     {
       "parameters": {
         "language": "javascript",
-        "code": "const input = $node['Wait 5 Seconds'].json;\nconst response = $json;\n\nconst status = response.response?.status || 'unknown';\nconst pollCount = (input.poll_count || 0) + 1;\n\nreturn [{\n  json: {\n    ...input,\n    render_status: status,\n    render_url: response.response?.url || null,\n    poll_count: pollCount,\n    render_response: response.response\n  }\n}];"
+        "code": "const input = $node['Wait 5 Seconds'].json;\nconst response = $json;\n\nconst statusCode = response.statusCode || response.error?.code;\nif (statusCode && statusCode >= 400) {\n  const errorCode = statusCode === 429\n    ? 'FAILED_RENDER_RATE_LIMIT'\n    : (statusCode >= 500 ? 'FAILED_RENDER_UPSTREAM' : 'FAILED_RENDER_REQUEST');\n\n  return [{\n    json: {\n      ...input,\n      error: true,\n      error_code: errorCode,\n      error_message: response.error?.message || response.message || 'Failed to check render status',\n      status: errorCode\n    }\n  }];\n}\n\nconst status = response.response?.status || 'unknown';\nconst pollCount = (input.poll_count || 0) + 1;\n\nreturn [{\n  json: {\n    ...input,\n    render_status: status,\n    render_url: response.response?.url || null,\n    poll_count: pollCount,\n    render_response: response.response\n  }\n}];"
       },
       "id": "parse_status",
       "name": "Parse Status",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1560, 0]
+      "position": [
+        1560,
+        0
+      ]
     },
     {
       "parameters": {
@@ -123,7 +159,10 @@
       "name": "Render Done?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1820, 0]
+      "position": [
+        1820,
+        0
+      ]
     },
     {
       "parameters": {
@@ -141,7 +180,10 @@
       "name": "Render Failed?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [2080, 100]
+      "position": [
+        2080,
+        100
+      ]
     },
     {
       "parameters": {
@@ -159,7 +201,10 @@
       "name": "Can Poll More?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [2340, 200]
+      "position": [
+        2340,
+        200
+      ]
     },
     {
       "parameters": {
@@ -170,7 +215,10 @@
       "name": "Success Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2080, -100]
+      "position": [
+        2080,
+        -100
+      ]
     },
     {
       "parameters": {
@@ -181,7 +229,10 @@
       "name": "Failed Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2340, 0]
+      "position": [
+        2340,
+        0
+      ]
     },
     {
       "parameters": {
@@ -192,39 +243,152 @@
       "name": "Timeout Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2600, 300]
+      "position": [
+        2600,
+        300
+      ]
     }
   ],
   "connections": {
-    "Webhook Trigger": { "main": [[{"node": "Prepare Shotstack Timeline", "type": "main", "index": 0}]] },
-    "Prepare Shotstack Timeline": { "main": [[{"node": "Submit Render Job", "type": "main", "index": 0}]] },
-    "Submit Render Job": { "main": [[{"node": "Get Render ID", "type": "main", "index": 0}]] },
-    "Get Render ID": { "main": [[{"node": "Wait 5 Seconds", "type": "main", "index": 0}]] },
-    "Wait 5 Seconds": { "main": [[{"node": "Check Render Status", "type": "main", "index": 0}]] },
-    "Check Render Status": { "main": [[{"node": "Parse Status", "type": "main", "index": 0}]] },
-    "Parse Status": { "main": [[{"node": "Render Done?", "type": "main", "index": 0}]] },
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prepare Shotstack Timeline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Shotstack Timeline": {
+      "main": [
+        [
+          {
+            "node": "Submit Render Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Submit Render Job": {
+      "main": [
+        [
+          {
+            "node": "Get Render ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Render ID": {
+      "main": [
+        [
+          {
+            "node": "Wait 5 Seconds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 5 Seconds": {
+      "main": [
+        [
+          {
+            "node": "Check Render Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Render Status": {
+      "main": [
+        [
+          {
+            "node": "Parse Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Status": {
+      "main": [
+        [
+          {
+            "node": "Render Done?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Render Done?": {
       "main": [
-        [{"node": "Success Response", "type": "main", "index": 0}],
-        [{"node": "Render Failed?", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Render Failed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Render Failed?": {
       "main": [
-        [{"node": "Failed Response", "type": "main", "index": 0}],
-        [{"node": "Can Poll More?", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Failed Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Can Poll More?",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Can Poll More?": {
       "main": [
-        [{"node": "Wait 5 Seconds", "type": "main", "index": 0}],
-        [{"node": "Timeout Response", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Wait 5 Seconds",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Timeout Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
   "active": false,
-  "settings": { "executionOrder": "v1" },
+  "settings": {
+    "executionOrder": "v1"
+  },
   "versionId": "yt-studio-wf-07-v1",
-  "meta": { "templateCredsSetupCompleted": true },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
   "id": "wf-07"
 }
