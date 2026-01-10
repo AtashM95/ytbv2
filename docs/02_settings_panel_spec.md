@@ -18,6 +18,13 @@ WF-11 Settings Panel sistemin bütün konfiqurasiyalarını idarə edir. Bu work
 | value | string | no | Non-secret dəyər (secret olmamalıdır) |
 | value_type | string | yes | `string`, `number`, `boolean`, `json`, `credential_ref`, `env_ref` |
 | credential_ref | string | no | Credentials provider-də saxlanan secret ID-si |
+| env_ref | string | no | ENV variable referansı |
+| scope | string | yes | `global`, `channel` |
+| environment | string | yes | `test`, `production` |
+| channel_key | string | no | `scope=channel` üçün unique channel identifier |
+| notes | string | no | Əlavə qeyd |
+| updated_by | string | no | Dəyişiklik edən istifadəçi |
+| updated_at | string | no | Son dəyişiklik zamanı |
 | scope | string | yes | `global`, `channel` |
 | environment | string | yes | `test`, `production` |
 | notes | string | no | Əlavə qeyd |
@@ -45,12 +52,14 @@ WF-11 Settings Panel sistemin bütün konfiqurasiyalarını idarə edir. Bu work
 - `storage.base_url` (string)
 - `storage.cloudinary.cloud_name` (string)
 - `storage.cloudinary.upload_preset` (string)
+- `storage.cloudinary.api_key_ref` (env_ref)
 - `storage.generic_http.upload_endpoint` (string)
 - `tts.model` (string)
 - `tts.voices` (json)
 - `render.endpoint` (string)
 - `render.default_resolution` (string)
 - `openai.model` (string)
+- `youtube.credential_ref` (credential_ref)
 
 ## WF-11 Error handling
 - Validasiyada `value_type` mismatch olduqda request rədd edilir.
@@ -58,6 +67,7 @@ WF-11 Settings Panel sistemin bütün konfiqurasiyalarını idarə edir. Bu work
 - Mühit (`environment`) uyğun olmadıqda update bloklanır.
 
 ## Audit
+- Hər update `updated_by` və `updated_at` ilə log edilə bilər.
 - Hər update `updated_by` ilə log edilə bilər.
 
 ## Security

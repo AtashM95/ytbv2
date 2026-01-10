@@ -39,6 +39,24 @@
               }
             },
             {
+              "fieldLabel": "Channel Key",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "channel_001"
+            },
+            {
+              "fieldLabel": "YouTube OAuth Credential Ref",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "cred_youtube_oauth"
+            },
+            {
+              "fieldLabel": "YouTube Channel ID",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "UCxxxxxxxxxxxx"
+            },
+            {
               "fieldLabel": "Channel Category",
               "fieldType": "dropdown",
               "requiredField": true,
@@ -291,10 +309,46 @@
               "placeholder": "upload_preset"
             },
             {
+              "fieldLabel": "Cloudinary API Key Env Ref",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "CLOUDINARY_API_KEY"
+            },
+            {
+              "fieldLabel": "Cloudinary API Secret Env Ref",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "CLOUDINARY_API_SECRET"
+            },
+            {
               "fieldLabel": "Generic Upload Endpoint",
               "fieldType": "text",
               "requiredField": false,
               "placeholder": "https://my-uploader/upload"
+            },
+            {
+              "fieldLabel": "Generic Auth Header Env Ref",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "STORAGE_AUTH_HEADER"
+            },
+            {
+              "fieldLabel": "S3 Bucket",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "ytb-assets"
+            },
+            {
+              "fieldLabel": "S3 Region",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "eu-central-1"
+            },
+            {
+              "fieldLabel": "S3 Credential Ref",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "cred_s3"
             }
           ]
         }

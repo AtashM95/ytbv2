@@ -5,6 +5,9 @@ WF-10 bütün workflow-lar üçün vahid formatda konfiqurasiya qaytarır. Confi
 
 ## Behavior
 1. `environment` dəyərinə əsasən config DB/Data Table-dan aktiv entries toplanır.
+2. Əvvəl `scope=global`, sonra `scope=channel` (channel_key uyğun olduqda) override edilir.
+3. `credential_ref` və `env_ref` dəyərləri açılmır; yalnız referans qaytarılır.
+4. Default-lar tətbiq edilir və çıxış formatı standartlaşdırılır.
 2. `credential_ref` və `env_ref` dəyərləri açılmır; yalnız referans qaytarılır.
 3. Default-lar tətbiq edilir və çıxış formatı standartlaşdırılır.
 4. Log-larda secret dəyəri yoxdur.
@@ -15,18 +18,11 @@ WF-10 çıxışı aşağıdakı formatdadır (bütün workflow-lara eyni):
 ```json
 {
   "environment": "production",
+  "scope": "global",
+  "channel_key": null,
   "resolved_config": {
-    "youtube": {
-      "channel_id": "channel_987",
-      "privacy_default": "public",
-      "api_credentials": {
-        "type": "credential_ref",
-        "ref": "cred_youtube_api"
-      }
-    },
     "storage": {
       "provider": "cloudinary",
-      "base_url": "https://cdn.example.com",
       "cloudinary": {
         "cloud_name": "demo",
         "upload_preset": "ytb_unsigned",
@@ -49,6 +45,10 @@ WF-10 çıxışı aşağıdakı formatdadır (bütün workflow-lara eyni):
   "resolved_at": "2025-01-10T12:00:00Z",
   "schema_version": "2.0",
   "storage_validation": {
+    "status": "OK",
+    "provider": "cloudinary",
+    "missing_fields": []
+  }
     "provider": "cloudinary",
     "is_valid": true,
     "errors": []
@@ -58,6 +58,7 @@ WF-10 çıxışı aşağıdakı formatdadır (bütün workflow-lara eyni):
 ```
 
 ## Error handling
+- Invalid environment/scope/channel_key → validation error.
 - Config DB bağlantısı uğursuz olarsa defaults ilə davam edilir.
 - Production modda storage config əskikdirsə `FAILED_CONFIG_STORAGE` qaytarılır.
 - Credential provider unreachable olduqda WF-10 yalnız `credential_ref` qaytarır və warning log yazır.
