@@ -14,40 +14,63 @@
       "name": "Webhook Trigger",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [0, 0],
+      "position": [
+        0,
+        0
+      ],
       "webhookId": "wf-10-config"
     },
     {
       "parameters": {
         "language": "javascript",
-        "code": "const input = $json;\nconst now = new Date().toISOString();\n\ntry {\n  // Determine environment based on mode\n  const mode = input.mode || 'test';\n  const environment = mode === 'test' ? 'test' : (input.environment || 'production');\n  const scope = input.scope || 'global';\n  const channelId = input.channel_id || null;\n  const runtimeOverrides = input.runtime_overrides || {};\n\n  return [\n    {\n      json: {\n        run_id: input.run_id || null,\n        mode: mode,\n        video_type: input.video_type || 'normal',\n        category: input.category || null,\n        custom_topic: input.custom_topic || null,\n        language: input.language || 'en',\n        target_countries: input.target_countries || ['US', 'UK', 'CA', 'AU'],\n        video_length: input.video_length || {},\n        quality: input.quality || {},\n        options: input.options || {},\n        source_video_url: input.source_video_url || null,\n        environment: environment,\n        scope: scope,\n        channel_id: channelId,\n        runtime_overrides: runtimeOverrides,\n        original_input: input\n      }\n    }\n  ];\n} catch (error) {\n  return [\n    {\n      json: {\n        error: true,\n        error_message: error.message,\n        status: 'FAILED_CONFIG_INIT'\n      }\n    }\n  ];\n}"
+        "code": "const input = $json;\n\ntry {\n  const allowedEnvs = ['test', 'production'];\n  const rawEnv = (input.environment || (input.mode === 'test' ? 'test' : (input.mode ? 'production' : 'production'))).toString();\n  const environment = rawEnv.toLowerCase();\n  if (!allowedEnvs.includes(environment)) {\n    return [{\n      json: {\n        error: true,\n        error_message: `Invalid environment: ${input.environment}`,\n        status: 'INVALID_ENVIRONMENT'\n      }\n    }];\n  }\n\n  const allowedScopes = ['global', 'channel'];\n  const scope = (input.scope || 'global').toString().toLowerCase();\n  if (!allowedScopes.includes(scope)) {\n    return [{\n      json: {\n        error: true,\n        error_message: `Invalid scope: ${input.scope}`,\n        status: 'INVALID_SCOPE'\n      }\n    }];\n  }\n\n  const channelKey = input.channel_key || null;\n  if (scope === 'channel' && !channelKey) {\n    return [{\n      json: {\n        error: true,\n        error_message: 'channel_key is required when scope=channel',\n        status: 'INVALID_CHANNEL_KEY'\n      }\n    }];\n  }\n\n  const mode = input.mode || (environment === 'test' ? 'test' : 'production');\n  const channelId = input.channel_id || null;\n  const runtimeOverrides = input.runtime_overrides || {};\n\n  return [\n    {\n      json: {\n        run_id: input.run_id || null,\n        mode: mode,\n        video_type: input.video_type || 'normal',\n        category: input.category || null,\n        custom_topic: input.custom_topic || null,\n        language: input.language || 'en',\n        target_countries: input.target_countries || ['US', 'UK', 'CA', 'AU'],\n        video_length: input.video_length || {},\n        quality: input.quality || {},\n        options: input.options || {},\n        source_video_url: input.source_video_url || null,\n        environment: environment,\n        scope: scope,\n        channel_key: channelKey,\n        channel_id: channelId,\n        runtime_overrides: runtimeOverrides,\n        original_input: input\n      }\n    }\n  ];\n} catch (error) {\n  return [\n    {\n      json: {\n        error: true,\n        error_message: error.message,\n        status: 'FAILED_CONFIG_INIT'\n      }\n    }\n  ];\n}"
       },
       "id": "normalize",
       "name": "Normalize Input",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [260, 0]
+      "position": [
+        260,
+        0
+      ]
     },
     {
       "parameters": {
         "language": "javascript",
-        "code": "const input = $json;\nconst mode = input.mode;\nconst isTest = mode === 'test';\nconst n8nBaseUrl = $env.N8N_BASE_URL || 'http://localhost:5678';\n\n// Build comprehensive defaults\nconst defaults = {\n  environment: input.environment,\n  mode: mode,\n  is_test: isTest,\n  \n  // n8n settings\n  n8n: {\n    base_url: n8nBaseUrl\n  },\n  \n  // OpenAI settings\n  openai: {\n    api_key: { type: 'env', ref: 'OPENAI_API_KEY' },\n    model: 'gpt-4o-mini',\n    max_tokens: 4000,\n    temperature: 0.7\n  },\n  \n  // ElevenLabs TTS settings\n  tts: {\n    provider: 'elevenlabs',\n    api_key: { type: 'env', ref: 'ELEVENLABS_API_KEY' },\n    model: 'eleven_multilingual_v2',\n    stability: 0.5,\n    similarity_boost: 0.75,\n    style: 0.0,\n    use_speaker_boost: true,\n    voices: {\n      en: { male: 'pNInz6obpgDQGcFmaJgB', female: 'EXAVITQu4vr4xnSDxMaL' },\n      ar: { male: '2EiwWnXFnvU5JabPnv8n', female: 'XB0fDUnXU5powFXDhCwa' },\n      tr: { male: 'ErXwobaYiN019PkySvjV', female: 'MF3mGyEYCl7XYWbV9V6O' },\n      es: { male: 'VR6AewLTigWG4xSOukaG', female: 'jBpfuIE2acCO8z3wKNLl' },\n      fr: { male: 'yoZ06aMxZJJ28mfd3POQ', female: 'XrExE9yKIg1WjnnlVkGX' },\n      de: { male: 'ODq5zmih8GrVes37Dizd', female: 'jsCqWAovK2LkecY7zXl4' },\n      pt: { male: 'g5CIjZEefAph4nQFvHAz', female: 'oWAxZDx7w5VEj9dCyTzz' },\n      hi: { male: 'nPczCjzI2devNBz1zQrb', female: 'piTKgcLEGmPE4e6mEKli' }\n    },\n    default_gender: 'male'\n  },\n  \n  // Pexels settings\n  pexels: {\n    api_key: { type: 'env', ref: 'PEXELS_API_KEY' },\n    per_page: 5,\n    orientation: 'landscape',\n    min_duration: 5,\n    min_width: 1920,\n    min_height: 1080\n  },\n  \n  // DALL-E settings\n  dalle: {\n    model: 'dall-e-3',\n    size: '1792x1024',\n    quality: 'standard',\n    style_prompt: 'Professional, clean, modern educational style. No text, no human faces, no human figures.'\n  },\n  \n  // Shotstack render settings\n  render: {\n    provider: 'shotstack',\n    api_key: { type: 'env', ref: isTest ? 'SHOTSTACK_SANDBOX_API_KEY' : 'SHOTSTACK_API_KEY' },\n    endpoint: isTest ? 'https://api.shotstack.io/stage' : 'https://api.shotstack.io/v1',\n    default_fps: 30,\n    default_resolution: 'hd',\n    poll_interval_sec: 10,\n    max_wait_sec: 1800,\n    effects: {\n      image: ['zoomIn', 'zoomOut', 'slideLeft', 'slideRight'],\n      transition: { in: 'fade', out: 'fade' }\n    }\n  },\n  \n  // YouTube publish settings\n  publish: {\n    enabled: !isTest,\n    client_id: { type: 'env', ref: 'YOUTUBE_CLIENT_ID' },\n    client_secret: { type: 'env', ref: 'YOUTUBE_CLIENT_SECRET' },\n    refresh_token: { type: 'env', ref: 'YOUTUBE_REFRESH_TOKEN' },\n    default_privacy: isTest ? 'private' : 'unlisted',\n    default_category_id: '27',  // Education\n    best_times: {\n      US: { weekday: '14:00-16:00 EST', weekend: '10:00-12:00 EST' },\n      UK: { weekday: '17:00-19:00 GMT', weekend: '11:00-13:00 GMT' },\n      Global: { best: 'Tuesday/Thursday 14:00-16:00 EST' }\n    }\n  },\n  \n  // Video length presets (in seconds)\n  video_lengths: {\n    normal: {\n      short_3_5: 240,\n      medium_8_12: 600,\n      long_15_20: 1050,\n      extra_25_40: 1950\n    },\n    short: {\n      '15s': 15,\n      '30s': 30,\n      '60s': 60\n    },\n    test: 30\n  },\n  \n  // Word count estimates (words per minute ~150)\n  word_counts: {\n    short_3_5: 600,\n    medium_8_12: 1500,\n    long_15_20: 2625,\n    extra_25_40: 4875,\n    test: 75\n  },\n  \n  // Category mappings\n  categories: {\n    tech_ai: { name: 'Technology & AI', youtube_category: '28', keywords: ['technology', 'AI', 'innovation'] },\n    finance: { name: 'Finance & Business', youtube_category: '22', keywords: ['money', 'investing', 'business'] },\n    health: { name: 'Health & Wellness', youtube_category: '26', keywords: ['health', 'fitness', 'wellness'] },\n    education: { name: 'Education', youtube_category: '27', keywords: ['learning', 'education', 'tutorial'] },\n    gaming: { name: 'Gaming', youtube_category: '20', keywords: ['gaming', 'games', 'gameplay'] },\n    cooking: { name: 'Cooking & Food', youtube_category: '26', keywords: ['cooking', 'recipe', 'food'] },\n    travel: { name: 'Travel', youtube_category: '19', keywords: ['travel', 'destination', 'adventure'] },\n    real_estate: { name: 'Real Estate', youtube_category: '22', keywords: ['real estate', 'property', 'investment'] },\n    reviews: { name: 'Product Reviews', youtube_category: '28', keywords: ['review', 'comparison', 'best'] },\n    pets: { name: 'Pets & Animals', youtube_category: '15', keywords: ['pets', 'animals', 'cute'] },\n    custom: { name: 'Custom', youtube_category: '22', keywords: [] }\n  },\n  \n  // Storage settings\n  storage: {\n    provider: $env.STORAGE_PROVIDER || 'cloudinary',\n    base_url: $env.STORAGE_BASE_URL || null,\n    asset_bucket: 'yt-studio-assets',\n    cloudinary: {\n      cloud_name: $env.CLOUDINARY_CLOUD_NAME || null,\n      upload_preset: $env.CLOUDINARY_UPLOAD_PRESET || null,\n      api_key_ref: { type: 'env', ref: 'CLOUDINARY_API_KEY' },\n      api_secret_ref: { type: 'env', ref: 'CLOUDINARY_API_SECRET' }\n    },\n    generic_http: {\n      upload_endpoint: $env.STORAGE_UPLOAD_ENDPOINT || null,\n      auth_header_ref: { type: 'env', ref: 'STORAGE_AUTH_HEADER' }\n    }\n  }\n};\n\nreturn [\n  {\n    json: {\n      ...input,\n      defaults: defaults\n    }\n  }\n];"
+        "code": "const input = $json;\nconst mode = input.mode;\nconst isTest = mode === 'test';\nconst n8nBaseUrl = $env.N8N_BASE_URL || 'http://localhost:5678';\n\n// Build comprehensive defaults\nconst defaults = {\n  environment: input.environment,\n  mode: mode,\n  is_test: isTest,\n  \n  // n8n settings\n  n8n: {\n    base_url: n8nBaseUrl\n  },\n  \n  // OpenAI settings\n  openai: {\n    api_key: { type: 'env_ref', ref: 'OPENAI_API_KEY' },\n    model: 'gpt-4o-mini',\n    max_tokens: 4000,\n    temperature: 0.7\n  },\n  \n  // ElevenLabs TTS settings\n  tts: {\n    provider: 'elevenlabs',\n    api_key: { type: 'env_ref', ref: 'ELEVENLABS_API_KEY' },\n    model: 'eleven_multilingual_v2',\n    stability: 0.5,\n    similarity_boost: 0.75,\n    style: 0.0,\n    use_speaker_boost: true,\n    voices: {\n      en: { male: 'pNInz6obpgDQGcFmaJgB', female: 'EXAVITQu4vr4xnSDxMaL' },\n      ar: { male: '2EiwWnXFnvU5JabPnv8n', female: 'XB0fDUnXU5powFXDhCwa' },\n      tr: { male: 'ErXwobaYiN019PkySvjV', female: 'MF3mGyEYCl7XYWbV9V6O' },\n      es: { male: 'VR6AewLTigWG4xSOukaG', female: 'jBpfuIE2acCO8z3wKNLl' },\n      fr: { male: 'yoZ06aMxZJJ28mfd3POQ', female: 'XrExE9yKIg1WjnnlVkGX' },\n      de: { male: 'ODq5zmih8GrVes37Dizd', female: 'jsCqWAovK2LkecY7zXl4' },\n      pt: { male: 'g5CIjZEefAph4nQFvHAz', female: 'oWAxZDx7w5VEj9dCyTzz' },\n      hi: { male: 'nPczCjzI2devNBz1zQrb', female: 'piTKgcLEGmPE4e6mEKli' }\n    },\n    default_gender: 'male'\n  },\n  \n  // Pexels settings\n  pexels: {\n    api_key: { type: 'env_ref', ref: 'PEXELS_API_KEY' },\n    per_page: 5,\n    orientation: 'landscape',\n    min_duration: 5,\n    min_width: 1920,\n    min_height: 1080\n  },\n  \n  // DALL-E settings\n  dalle: {\n    model: 'dall-e-3',\n    size: '1792x1024',\n    quality: 'standard',\n    style_prompt: 'Professional, clean, modern educational style. No text, no human faces, no human figures.'\n  },\n  \n  // Shotstack render settings\n  render: {\n    provider: 'shotstack',\n    api_key: { type: 'env_ref', ref: isTest ? 'SHOTSTACK_SANDBOX_API_KEY' : 'SHOTSTACK_API_KEY' },\n    endpoint: isTest ? 'https://api.shotstack.io/stage' : 'https://api.shotstack.io/v1',\n    default_fps: 30,\n    default_resolution: 'hd',\n    poll_interval_sec: 10,\n    max_wait_sec: 1800,\n    effects: {\n      image: ['zoomIn', 'zoomOut', 'slideLeft', 'slideRight'],\n      transition: { in: 'fade', out: 'fade' }\n    }\n  },\n  \n  // YouTube publish settings\n  publish: {\n    enabled: !isTest,\n    client_id: { type: 'env_ref', ref: 'YOUTUBE_CLIENT_ID' },\n    client_secret: { type: 'env_ref', ref: 'YOUTUBE_CLIENT_SECRET' },\n    refresh_token: { type: 'env_ref', ref: 'YOUTUBE_REFRESH_TOKEN' },\n    default_privacy: isTest ? 'private' : 'unlisted',\n    default_category_id: '27',  // Education\n    best_times: {\n      US: { weekday: '14:00-16:00 EST', weekend: '10:00-12:00 EST' },\n      UK: { weekday: '17:00-19:00 GMT', weekend: '11:00-13:00 GMT' },\n      Global: { best: 'Tuesday/Thursday 14:00-16:00 EST' }\n    }\n  },\n  \n  // Video length presets (in seconds)\n  video_lengths: {\n    normal: {\n      short_3_5: 240,\n      medium_8_12: 600,\n      long_15_20: 1050,\n      extra_25_40: 1950\n    },\n    short: {\n      '15s': 15,\n      '30s': 30,\n      '60s': 60\n    },\n    test: 30\n  },\n  \n  // Word count estimates (words per minute ~150)\n  word_counts: {\n    short_3_5: 600,\n    medium_8_12: 1500,\n    long_15_20: 2625,\n    extra_25_40: 4875,\n    test: 75\n  },\n  \n  // Category mappings\n  categories: {\n    tech_ai: { name: 'Technology & AI', youtube_category: '28', keywords: ['technology', 'AI', 'innovation'] },\n    finance: { name: 'Finance & Business', youtube_category: '22', keywords: ['money', 'investing', 'business'] },\n    health: { name: 'Health & Wellness', youtube_category: '26', keywords: ['health', 'fitness', 'wellness'] },\n    education: { name: 'Education', youtube_category: '27', keywords: ['learning', 'education', 'tutorial'] },\n    gaming: { name: 'Gaming', youtube_category: '20', keywords: ['gaming', 'games', 'gameplay'] },\n    cooking: { name: 'Cooking & Food', youtube_category: '26', keywords: ['cooking', 'recipe', 'food'] },\n    travel: { name: 'Travel', youtube_category: '19', keywords: ['travel', 'destination', 'adventure'] },\n    real_estate: { name: 'Real Estate', youtube_category: '22', keywords: ['real estate', 'property', 'investment'] },\n    reviews: { name: 'Product Reviews', youtube_category: '28', keywords: ['review', 'comparison', 'best'] },\n    pets: { name: 'Pets & Animals', youtube_category: '15', keywords: ['pets', 'animals', 'cute'] },\n    custom: { name: 'Custom', youtube_category: '22', keywords: [] }\n  },\n  \n  // Storage settings\n  storage: {\n    provider: $env.STORAGE_PROVIDER || 'cloudinary',\n    base_url: $env.STORAGE_BASE_URL || null,\n    asset_bucket: 'yt-studio-assets',\n    cloudinary: {\n      cloud_name: $env.CLOUDINARY_CLOUD_NAME || null,\n      upload_preset: $env.CLOUDINARY_UPLOAD_PRESET || null,\n      api_key_ref: { type: 'env_ref', ref: 'CLOUDINARY_API_KEY' },\n      api_secret_ref: { type: 'env_ref', ref: 'CLOUDINARY_API_SECRET' }\n    },\n    generic_http: {\n      upload_endpoint: $env.STORAGE_UPLOAD_ENDPOINT || null,\n      auth_header_ref: { type: 'env_ref', ref: 'STORAGE_AUTH_HEADER' }\n    },\n    s3: {\n      bucket: $env.S3_BUCKET || null,\n      region: $env.S3_REGION || null,\n      credential_ref: { type: 'env_ref', ref: 'S3_CREDENTIAL_REF' }\n    }\n  }\n};\n\nreturn [\n  {\n    json: {\n      ...input,\n      defaults: defaults\n    }\n  }\n];"
       },
       "id": "defaults",
       "name": "Load Defaults",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [520, 0]
+      "position": [
+        520,
+        0
+      ]
     },
     {
       "parameters": {
         "operation": "select",
-        "schema": { "__rl": true, "mode": "list", "value": "public" },
-        "table": { "__rl": true, "mode": "list", "value": "yt_studio_config" },
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "yt_studio_config"
+        },
         "where": {
           "values": [
-            { "column": "environment", "value": "={{ $json.environment }}" },
-            { "column": "is_active", "value": "=true" }
+            {
+              "column": "environment",
+              "value": "={{ $json.environment }}"
+            },
+            {
+              "column": "is_active",
+              "value": "=true"
+            }
           ]
         },
         "combineFilters": "AND",
@@ -58,7 +81,10 @@
       "name": "Query Config DB",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [780, 0],
+      "position": [
+        780,
+        0
+      ],
       "credentials": {
         "postgres": {
           "id": "postgres_yt_studio",
@@ -70,13 +96,16 @@
     {
       "parameters": {
         "language": "javascript",
-        "code": "const input = $node['Load Defaults'].json;\nconst dbItems = $input.all();\nconst usedDb = Array.isArray(dbItems) && dbItems.length > 0 && !dbItems[0].json?.error;\n\nfunction setNested(obj, path, value) {\n  const parts = path.split('.');\n  let current = obj;\n  for (let i = 0; i < parts.length - 1; i++) {\n    const key = parts[i];\n    if (!current[key] || typeof current[key] !== 'object') {\n      current[key] = {};\n    }\n    current = current[key];\n  }\n  current[parts[parts.length - 1]] = value;\n}\n\nfunction parseValue(row) {\n  if (row.value_type === 'credential_ref') {\n    return { type: 'credential_ref', ref: row.credential_ref };\n  }\n  if (row.value_type === 'number') {\n    return Number(row.value);\n  }\n  if (row.value_type === 'boolean') {\n    return row.value === 'true' || row.value === true;\n  }\n  if (row.value_type === 'json') {\n    try {\n      return JSON.parse(row.value);\n    } catch (e) {\n      return row.value;\n    }\n  }\n  return row.value;\n}\n\nconst merged = JSON.parse(JSON.stringify(input.defaults));\n\nif (usedDb) {\n  for (const item of dbItems) {\n    const row = item.json;\n    if (!row || !row.key) continue;\n    if (row.scope !== 'global' && row.scope !== input.scope) continue;\n    const value = parseValue(row);\n    setNested(merged, row.key, value);\n  }\n}\n\nreturn [\n  {\n    json: {\n      ...input,\n      merged_config: merged,\n      config_from_db: usedDb,\n      db_records_count: usedDb ? dbItems.length : 0\n    }\n  }\n];"
+        "code": "const input = $node['Load Defaults'].json;\nconst dbItems = $input.all();\nconst usedDb = Array.isArray(dbItems) && dbItems.length > 0 && !dbItems[0].json?.error;\n\nfunction setNested(obj, path, value) {\n  const parts = path.split('.');\n  let current = obj;\n  for (let i = 0; i < parts.length - 1; i++) {\n    const key = parts[i];\n    if (!current[key] || typeof current[key] !== 'object') {\n      current[key] = {};\n    }\n    current = current[key];\n  }\n  current[parts[parts.length - 1]] = value;\n}\n\nfunction parseValue(row) {\n  const valueType = row.value_type || 'string';\n  if (valueType === 'credential_ref') {\n    return { type: 'credential_ref', ref: row.credential_ref || row.value };\n  }\n  if (valueType === 'env_ref') {\n    return { type: 'env_ref', ref: row.env_ref || row.value };\n  }\n  if (valueType === 'number') {\n    return row.value === null ? null : Number(row.value);\n  }\n  if (valueType === 'boolean') {\n    return row.value === 'true' || row.value === true;\n  }\n  if (valueType === 'json') {\n    try {\n      return JSON.parse(row.value);\n    } catch (e) {\n      return row.value;\n    }\n  }\n  return row.value;\n}\n\nconst merged = JSON.parse(JSON.stringify(input.defaults));\n\nif (usedDb) {\n  const rows = dbItems.map(item => item.json).filter(Boolean);\n  const globalRows = rows.filter(row => row.scope === 'global');\n  const channelRows = input.scope === 'channel' ? rows.filter(row => row.scope === 'channel' && row.channel_key && row.channel_key === input.channel_key) : [];\n\n  for (const row of globalRows) {\n    if (!row.key) continue;\n    const value = parseValue(row);\n    setNested(merged, row.key, value);\n  }\n\n  for (const row of channelRows) {\n    if (!row.key) continue;\n    const value = parseValue(row);\n    setNested(merged, row.key, value);\n  }\n}\n\nreturn [\n  {\n    json: {\n      ...input,\n      merged_config: merged,\n      config_from_db: usedDb,\n      db_records_count: usedDb ? dbItems.length : 0\n    }\n  }\n];"
       },
       "id": "merge",
       "name": "Merge DB Config",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1040, 0]
+      "position": [
+        1040,
+        0
+      ]
     },
     {
       "parameters": {
@@ -87,43 +116,101 @@
       "name": "Apply Overrides & Compute",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1300, 0]
+      "position": [
+        1300,
+        0
+      ]
     },
     {
       "parameters": {
         "language": "javascript",
-        "code": "const input = $json;\nconst now = new Date().toISOString();\nconst resolved = input.resolved_config || {};\nconst mode = input.mode || 'test';\nconst isTest = mode === 'test';\nconst storage = resolved.storage || {};\nconst provider = storage.provider || 'cloudinary';\nconst errors = [];\n\nif (provider === 'cloudinary') {\n  const cloud = storage.cloudinary || {};\n  if (!cloud.cloud_name) {\n    errors.push('storage.cloudinary.cloud_name is required');\n  }\n  const hasPreset = !!cloud.upload_preset;\n  if (!hasPreset) {\n    const apiKey = $env.CLOUDINARY_API_KEY || null;\n    const apiSecret = $env.CLOUDINARY_API_SECRET || null;\n    if (!apiKey || !apiSecret) {\n      errors.push('CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET are required for signed uploads');\n    }\n  }\n} else if (provider === 'generic_http') {\n  const endpoint = storage.generic_http?.upload_endpoint;\n  if (!endpoint) {\n    errors.push('storage.generic_http.upload_endpoint is required');\n  }\n} else if (provider === 's3') {\n  errors.push('storage.provider s3 is not configured');\n} else {\n  errors.push(`storage.provider ${provider} is not supported`);\n}\n\nconst storageValidation = {\n  provider: provider,\n  is_valid: errors.length === 0,\n  errors: errors,\n  is_test: isTest\n};\n\nif (!isTest && errors.length > 0) {\n  return [{\n    json: {\n      run_id: input.run_id,\n      mode: input.mode,\n      error: true,\n      error_message: 'Storage config invalid: ' + errors.join('; '),\n      status: 'FAILED_CONFIG_STORAGE',\n      storage_validation: storageValidation\n    }\n  }];\n}\n\n// Build clean response\nconst response = {\n  run_id: input.run_id,\n  mode: input.mode,\n  video_type: input.video_type,\n  category: input.category,\n  custom_topic: input.custom_topic,\n  language: input.language,\n  target_countries: input.target_countries,\n  video_length: input.video_length,\n  quality: input.quality,\n  options: input.options,\n  source_video_url: input.source_video_url,\n  environment: input.environment,\n  scope: input.scope,\n  channel_id: input.channel_id,\n  \n  // Resolved configuration\n  resolved_config: input.resolved_config,\n  \n  // Computed values for easy access\n  computed: input.computed,\n  \n  // Meta\n  config_source: input.config_source,\n  config_resolved_at: now,\n  schema_version: '2.0',\n  storage_validation: storageValidation,\n  status: 'CONFIG_RESOLVED'\n};\n\nif (isTest && errors.length > 0) {\n  response.warning = 'Storage config incomplete; uploads may be skipped in test mode.';\n}\n\nreturn [{ json: response }];"
+        "code": "const input = $json;\nconst now = new Date().toISOString();\nconst resolved = input.resolved_config || {};\nconst environment = input.environment || 'production';\nconst mode = input.mode || (environment === 'test' ? 'test' : 'production');\nconst isTest = environment === 'test';\nconst storage = resolved.storage || {};\nconst provider = storage.provider || 'cloudinary';\nconst missing = [];\n\nconst isRef = (value) => value && typeof value === 'object' && value.ref;\n\nif (provider === 'cloudinary') {\n  const cloud = storage.cloudinary || {};\n  if (!cloud.cloud_name) {\n    missing.push('storage.cloudinary.cloud_name');\n  }\n  const hasPreset = !!cloud.upload_preset;\n  const hasCredRef = isRef(cloud.credential_ref) || (isRef(cloud.api_key_ref) && isRef(cloud.api_secret_ref));\n  if (!hasPreset && !hasCredRef) {\n    missing.push('storage.cloudinary.upload_preset_or_credentials');\n  }\n} else if (provider === 'generic_http') {\n  const endpoint = storage.generic_http?.upload_endpoint;\n  if (!endpoint) {\n    missing.push('storage.generic_http.upload_endpoint');\n  }\n} else if (provider === 's3') {\n  const s3 = storage.s3 || {};\n  if (!s3.bucket) missing.push('storage.s3.bucket');\n  if (!s3.region) missing.push('storage.s3.region');\n  if (!isRef(s3.credential_ref)) missing.push('storage.s3.credential_ref');\n} else {\n  missing.push(`storage.provider.${provider}`);\n}\n\nconst storageStatus = missing.length === 0 ? 'OK' : 'FAILED_CONFIG_STORAGE';\nconst storageValidation = {\n  status: storageStatus,\n  provider: provider,\n  missing_fields: missing.length ? missing : undefined,\n  reason: missing.length ? 'Missing required storage config fields' : undefined\n};\n\nif (!isTest && storageStatus === 'FAILED_CONFIG_STORAGE') {\n  return [{\n    json: {\n      run_id: input.run_id,\n      mode: mode,\n      environment: environment,\n      scope: input.scope,\n      channel_key: input.channel_key,\n      schema_version: '2.0',\n      resolved_at: now,\n      resolved_config: input.resolved_config,\n      storage_validation: storageValidation,\n      status: storageStatus,\n      error: true,\n      error_message: storageValidation.reason\n    }\n  }];\n}\n\nconst response = {\n  run_id: input.run_id,\n  mode: mode,\n  environment: environment,\n  scope: input.scope,\n  channel_key: input.channel_key,\n  schema_version: '2.0',\n  resolved_at: now,\n  resolved_config: input.resolved_config,\n  storage_validation: storageValidation,\n  status: storageStatus,\n  computed: input.computed,\n  config_source: input.config_source,\n  warnings: []\n};\n\nif (isTest && storageStatus === 'FAILED_CONFIG_STORAGE') {\n  response.warnings.push('Storage config incomplete; uploads may be skipped in test mode.');\n}\n\nreturn [{ json: response }];"
       },
       "id": "response",
       "name": "Build Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1560, 0]
+      "position": [
+        1560,
+        0
+      ]
     }
   ],
   "connections": {
     "Webhook Trigger": {
-      "main": [[{"node": "Normalize Input", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Normalize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Normalize Input": {
-      "main": [[{"node": "Load Defaults", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Load Defaults",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Load Defaults": {
-      "main": [[{"node": "Query Config DB", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Query Config DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Query Config DB": {
-      "main": [[{"node": "Merge DB Config", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Merge DB Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Merge DB Config": {
-      "main": [[{"node": "Apply Overrides & Compute", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Apply Overrides & Compute",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Apply Overrides & Compute": {
-      "main": [[{"node": "Build Response", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Build Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
-  "settings": { "executionOrder": "v1" },
+  "settings": {
+    "executionOrder": "v1"
+  },
   "versionId": "yt-studio-wf-10-v1",
-  "meta": { "templateCredsSetupCompleted": true },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
   "id": "wf-10"
 }

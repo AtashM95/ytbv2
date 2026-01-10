@@ -2,15 +2,15 @@
 
 ## Import/Quraşdırma Ardıcıllığı
 1. WF-00 Main Router
-2. WF-01 Ideation Intake
-3. WF-02 Research & Source Intake
-4. WF-03 Script Draft
-5. WF-04 Script Review & Approval
+2. WF-01 Orchestrator
+3. WF-02 Trend Analyzer
+4. WF-03 Script Generator
+5. WF-04 Script Reviewer
 6. WF-05 Voiceover Generation
-7. WF-06 Scene Asset Build
-8. WF-07 Render Orchestration
+7. WF-06 Asset Collector
+8. WF-07 Video Renderer
 9. WF-08 Thumbnail Generator
-10. WF-09 YouTube Publish
+10. WF-09 YouTube Publisher
 11. WF-10 Get Config
 12. WF-11 Settings Panel
 13. WF-12 Short Extractor
@@ -19,45 +19,31 @@
 - Config DB bağlantısı işləkdir.
 - Credentials provider aktivdir və referanslar işləyir.
 - Storage endpoint-lər əlçatandır.
-- Audit log-lar yazılır.
+- Run registry (`yt_run_registry`) yazılır.
 
 ## Workflow-specific testlər
 ### WF-01
-- Yeni run yaradılması və manifest-in dolması.
-- Invalid input ssenariləri.
-
-### WF-02
-- Mənbə əlavə edilməsi və license yoxlaması.
-
-### WF-03
-- Script generation və min/max söz sayı validasiyası.
-
-### WF-04
-- Review approval flow və script dəyişiklikləri.
+- Yeni run yaradılması və registry `RUNNING` yazılması.
+- Policy gate fail → `FAILED_POLICY`.
+- Uniqueness gate fail → `FAILED_UNIQUENESS`.
 
 ### WF-05
-- ElevenLabs response=file binary upload edilir.
 - Voiceover output-da `voiceover_url_signed` real və qalıcı URL-dir.
-- `storage.example.com` placeholder URL qalmayıb.
-
-### WF-06
-- Asset download və checksum təsdiqi.
-
-### WF-07
-- Render job submission və status polling.
-
-### WF-08
-- DALL-E URL-i əvvəlcə endirilir, sonra storage-a upload olunur.
-- Output-da `thumbnail_url` qalıcı URL-dir (expire olmur).
-- Fallback işləyirsə status `THUMBNAIL_FALLBACK`, yoxdursa `FAILED_THUMBNAIL` olur.
 
 ### WF-09
-- YouTube upload və metadata tətbiqi.
+- OAuth/refresh token error → retry + `FAILED_YT_AUTH`.
+- Quota/rate-limit error → retry + `FAILED_YT_QUOTA`.
+- Upload sonrası manifest `upload_response` update olunur.
 
 ### WF-10
 - Config resolve və storage required key yoxlaması.
+- Output-da `resolved_at` field mövcuddur.
 - Production modda storage config əskikdirsə `FAILED_CONFIG_STORAGE` qaytarılır.
-- Test modda storage config əskikdirsə xəbərdarlıqla davam edir.
+
+### WF-11
+- Form input-larına uyğun `key/value` satırları DB-yə yazılır.
+- Upsert conflict target: `environment + scope + channel_key + key`.
+- Secrets yalnız `credential_ref`/`env_ref` kimi saxlanılır.
 
 ## Contract yoxlamaları
 - Contract field adları dəyişməyib: run_id, mode, scene_assets, voiceover_url_signed, render_id, youtube_video_id, manifest.

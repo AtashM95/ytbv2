@@ -112,20 +112,23 @@ CREATE TABLE IF NOT EXISTS yt_studio_config (
     value TEXT,
     value_type VARCHAR(50) NOT NULL DEFAULT 'string',
     credential_ref VARCHAR(255),
+    env_ref VARCHAR(255),
     scope VARCHAR(50) NOT NULL DEFAULT 'global',
     environment VARCHAR(50) NOT NULL DEFAULT 'production',
+    channel_key VARCHAR(100),
     notes TEXT,
     is_active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_by VARCHAR(100),
     
-    CONSTRAINT yt_config_unique UNIQUE (key, scope, environment)
+    CONSTRAINT yt_config_unique UNIQUE (environment, scope, channel_key, key)
 );
 
 -- İndekslər
 CREATE INDEX idx_config_env ON yt_studio_config(environment);
 CREATE INDEX idx_config_scope ON yt_studio_config(scope);
+CREATE INDEX idx_config_channel_key ON yt_studio_config(channel_key);
 CREATE INDEX idx_config_active ON yt_studio_config(is_active);
 CREATE INDEX idx_config_key ON yt_studio_config(key);
 ```

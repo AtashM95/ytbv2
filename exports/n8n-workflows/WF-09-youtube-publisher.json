@@ -6,25 +6,67 @@
         "httpMethod": "POST",
         "path": "wf-09-publish",
         "responseMode": "lastNode",
-        "options": { "responseData": "firstEntryJson" }
+        "options": {
+          "responseData": "firstEntryJson"
+        }
       },
       "id": "trigger",
       "name": "Webhook Trigger",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [0, 0],
+      "position": [
+        0,
+        0
+      ],
       "webhookId": "wf-09-publish"
     },
     {
       "parameters": {
         "language": "javascript",
-        "code": "const input = $json;\nconst config = input.resolved_config || {};\nconst metadata = input.manifest?.metadata || input.manifest?.publish || {};\nconst isTest = input.mode === 'test';\n\n// FIXED: Use fallback chain for render_url\nconst renderUrl = input.render_url || input.manifest?.render?.render_url || input.manifest?.render_url;\nif (!renderUrl) {\n  return [{\n    json: {\n      ...input,\n      error: true,\n      error_message: 'No render URL available for publishing',\n      status: 'FAILED'\n    }\n  }];\n}\n\n// Build video metadata - check multiple possible locations\nconst title = metadata.title || input.manifest?.publish?.title || input.selected_topic || 'Untitled Video';\nconst description = metadata.description || input.manifest?.publish?.description || '';\nconst tags = metadata.tags || input.manifest?.publish?.tags || [];\nconst categoryId = metadata.category_id || '22';\n\n// Determine privacy status\nlet privacyStatus = 'private';\nlet publishAt = null;\n\nif (!isTest && input.options?.best_time_publish) {\n  const optimalHour = config.publishing?.optimal_hour || 14;\n  const publishDate = new Date();\n  publishDate.setDate(publishDate.getDate() + 1);\n  publishDate.setHours(optimalHour, 0, 0, 0);\n  privacyStatus = 'private';\n  publishAt = publishDate.toISOString();\n} else if (!isTest) {\n  privacyStatus = 'public';\n}\n\n// FIXED: Get thumbnail URL from multiple possible locations\nconst thumbnailUrl = input.thumbnail_url || input.manifest?.thumbnail?.url || input.manifest?.thumbnail_url;\n\nconst youtubeMetadata = {\n  snippet: {\n    title: title.substring(0, 100),\n    description: description.substring(0, 5000),\n    tags: tags.slice(0, 500),\n    categoryId: categoryId,\n    defaultLanguage: input.language || 'en',\n    defaultAudioLanguage: input.language || 'en'\n  },\n  status: {\n    privacyStatus: privacyStatus,\n    selfDeclaredMadeForKids: false,\n    publishAt: publishAt\n  }\n};\n\nreturn [{\n  json: {\n    ...input,\n    youtube_metadata: youtubeMetadata,\n    render_url: renderUrl,\n    thumbnail_url: thumbnailUrl,\n    is_test: isTest,\n    privacy_status: privacyStatus,\n    scheduled_publish: publishAt\n  }\n}];"
+        "code": "const input = $json;\nconst config = input.resolved_config || {};\nconst metadata = input.manifest?.metadata || input.manifest?.publish || {};\nconst isTest = input.mode === 'test';\n\nconst expectedCredentialName = 'YouTube OAuth2';\nconst providedCred = config.youtube?.credential_ref?.ref || config.youtube?.credential_name || null;\nif (providedCred && providedCred !== expectedCredentialName) {\n  return [{\n    json: {\n      ...input,\n      error: true,\n      error_message: `YouTube credential mismatch: expected ${expectedCredentialName} but got ${providedCred}`,\n      status: 'FAILED_YT_AUTH',\n      error_code: 'FAILED_YT_AUTH'\n    }\n  }];\n}\n\n// FIXED: Use fallback chain for render_url\nconst renderUrl = input.render_url || input.manifest?.render?.render_url || input.manifest?.render_url;\nif (!renderUrl) {\n  return [{\n    json: {\n      ...input,\n      error: true,\n      error_message: 'No render URL available for publishing',\n      status: 'FAILED',\n      error_code: 'FAILED'\n    }\n  }];\n}\n\n// Build video metadata - check multiple possible locations\nconst title = metadata.title || input.manifest?.publish?.title || input.selected_topic || 'Untitled Video';\nconst description = metadata.description || input.manifest?.publish?.description || '';\nconst tags = metadata.tags || input.manifest?.publish?.tags || [];\nconst categoryId = metadata.category_id || '22';\n\n// Determine privacy status\nlet privacyStatus = 'private';\nlet publishAt = null;\n\nif (!isTest && input.options?.best_time_publish) {\n  const optimalHour = config.publishing?.optimal_hour || 14;\n  const publishDate = new Date();\n  publishDate.setDate(publishDate.getDate() + 1);\n  publishDate.setHours(optimalHour, 0, 0, 0);\n  privacyStatus = 'private';\n  publishAt = publishDate.toISOString();\n} else if (!isTest) {\n  privacyStatus = 'public';\n}\n\n// FIXED: Get thumbnail URL from multiple possible locations\nconst thumbnailUrl = input.thumbnail_url || input.manifest?.thumbnail?.url || input.manifest?.thumbnail_url;\n\nconst youtubeMetadata = {\n  snippet: {\n    title: title.substring(0, 100),\n    description: description.substring(0, 5000),\n    tags: tags.slice(0, 500),\n    categoryId: categoryId,\n    defaultLanguage: input.language || 'en',\n    defaultAudioLanguage: input.language || 'en'\n  },\n  status: {\n    privacyStatus: privacyStatus,\n    selfDeclaredMadeForKids: false,\n    publishAt: publishAt\n  }\n};\n\nreturn [{\n  json: {\n    ...input,\n    youtube_metadata: youtubeMetadata,\n    youtube_credential_ref: providedCred,\n    render_url: renderUrl,\n    thumbnail_url: thumbnailUrl,\n    is_test: isTest,\n    privacy_status: privacyStatus,\n    scheduled_publish: publishAt\n  }\n}];\n"
       },
       "id": "prepare",
       "name": "Prepare Upload Metadata",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [260, 0]
+      "position": [
+        260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.error}}",
+              "operation": "isTrue"
+            }
+          ]
+        }
+      },
+      "id": "prepare_error",
+      "name": "Has Prepare Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        520,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $json;\nreturn [{\n  json: {\n    ...input,\n    retry_count: 0,\n    max_retries: 3,\n    retry_delay_sec: 5\n  },\n  binary: $binary\n}];\n"
+      },
+      "id": "init_retry",
+      "name": "Init Upload Retry",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        -80
+      ]
     },
     {
       "parameters": {
@@ -41,7 +83,10 @@
       "name": "Is Test Mode?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [520, 0]
+      "position": [
+        520,
+        0
+      ]
     },
     {
       "parameters": {
@@ -52,7 +97,10 @@
       "name": "Test Mode Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [780, -100]
+      "position": [
+        780,
+        -120
+      ]
     },
     {
       "parameters": {
@@ -60,14 +108,21 @@
         "url": "={{$json.render_url}}",
         "options": {
           "timeout": 300000,
-          "response": { "response": { "responseFormat": "file" } }
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
         }
       },
       "id": "download_video",
       "name": "Download Rendered Video",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [780, 100],
+      "position": [
+        780,
+        100
+      ],
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 5000,
@@ -92,7 +147,10 @@
       "name": "Upload to YouTube",
       "type": "n8n-nodes-base.youTube",
       "typeVersion": 1,
-      "position": [1040, 100],
+      "position": [
+        1040,
+        100
+      ],
       "credentials": {
         "youTubeOAuth2Api": {
           "id": "youtube_oauth2",
@@ -100,17 +158,6 @@
         }
       },
       "continueOnFail": true
-    },
-    {
-      "parameters": {
-        "language": "javascript",
-        "code": "const input = $node['Prepare Upload Metadata'].json;\nconst uploadResponse = $json;\nconst now = new Date().toISOString();\n\ntry {\n  if (uploadResponse.error || !uploadResponse.id) {\n    throw new Error(uploadResponse.error?.message || uploadResponse.message || 'Upload failed');\n  }\n\n  const videoId = uploadResponse.id;\n  const youtubeUrl = `https://youtube.com/watch?v=${videoId}`;\n\n  return [{\n    json: {\n      run_id: input.run_id,\n      mode: input.mode,\n      youtube_video_id: videoId,\n      youtube_url: youtubeUrl,\n      youtube_status: uploadResponse.status,\n      privacy_status: input.privacy_status,\n      scheduled_publish: input.scheduled_publish,\n      thumbnail_url: input.thumbnail_url,\n      has_thumbnail: !!input.thumbnail_url,\n      uploaded_at: now,\n      status: 'PUBLISHED'\n    }\n  }];\n\n} catch (error) {\n  return [{\n    json: {\n      run_id: input.run_id,\n      mode: input.mode,\n      error: true,\n      error_message: error.message,\n      status: 'FAILED'\n    }\n  }];\n}"
-      },
-      "id": "process_upload",
-      "name": "Process Upload Result",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1300, 100]
     },
     {
       "parameters": {
@@ -133,7 +180,10 @@
       "name": "Should Upload Thumbnail?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1560, 100]
+      "position": [
+        1560,
+        100
+      ]
     },
     {
       "parameters": {
@@ -141,14 +191,21 @@
         "url": "={{$json.thumbnail_url}}",
         "options": {
           "timeout": 60000,
-          "response": { "response": { "responseFormat": "file" } }
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
         }
       },
       "id": "download_thumbnail",
       "name": "Download Thumbnail",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1820, 0],
+      "position": [
+        1820,
+        0
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 2000,
@@ -161,18 +218,26 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "image/png" }
+            {
+              "name": "Content-Type",
+              "value": "image/png"
+            }
           ]
         },
         "sendBody": true,
         "contentType": "binaryData",
-        "options": { "timeout": 60000 }
+        "options": {
+          "timeout": 60000
+        }
       },
       "id": "set_thumbnail_api",
       "name": "Set Thumbnail via API",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [2080, 0],
+      "position": [
+        2080,
+        0
+      ],
       "credentials": {
         "oAuth2Api": {
           "id": "youtube_oauth2",
@@ -184,50 +249,394 @@
     {
       "parameters": {
         "language": "javascript",
-        "code": "const input = $node['Process Upload Result'].json;\nconst thumbResult = $json;\nconst now = new Date().toISOString();\n\nconst thumbnailSet = !thumbResult.error && (thumbResult.items || thumbResult.kind);\n\nreturn [{\n  json: {\n    run_id: input.run_id,\n    mode: input.mode,\n    youtube_video_id: input.youtube_video_id,\n    youtube_url: input.youtube_url,\n    privacy_status: input.privacy_status,\n    scheduled_publish: input.scheduled_publish,\n    thumbnail_set: thumbnailSet,\n    completed_at: now,\n    status: 'PUBLISHED'\n  }\n}];"
+        "code": "const input = $node['Build Upload Success'].json;\nconst thumbResult = $json;\nconst now = new Date().toISOString();\n\nconst thumbnailSet = !thumbResult.error && (thumbResult.items || thumbResult.kind);\nconst manifest = input.manifest || {};\nconst publishManifest = {\n  ...(manifest.publish || {}),\n  youtube_video_id: input.youtube_video_id,\n  upload_response: input.upload_response || {},\n  thumbnail_set: thumbnailSet\n};\n\nreturn [{\n  json: {\n    run_id: input.run_id,\n    mode: input.mode,\n    youtube_video_id: input.youtube_video_id,\n    youtube_url: input.youtube_url,\n    privacy_status: input.privacy_status,\n    scheduled_publish: input.scheduled_publish,\n    thumbnail_set: thumbnailSet,\n    completed_at: now,\n    status: 'PUBLISHED',\n    manifest: {\n      ...manifest,\n      publish: publishManifest\n    }\n  }\n}];\n"
       },
       "id": "final_with_thumb",
       "name": "Final Response (with Thumbnail)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2340, 0]
+      "position": [
+        2340,
+        0
+      ]
     },
     {
       "parameters": {
         "language": "javascript",
-        "code": "const input = $json;\nconst now = new Date().toISOString();\n\nreturn [{\n  json: {\n    run_id: input.run_id,\n    mode: input.mode,\n    youtube_video_id: input.youtube_video_id,\n    youtube_url: input.youtube_url,\n    privacy_status: input.privacy_status,\n    scheduled_publish: input.scheduled_publish,\n    thumbnail_set: false,\n    completed_at: now,\n    status: input.error ? 'FAILED' : 'PUBLISHED'\n  }\n}];"
+        "code": "const input = $node['Build Upload Success'].json;\nconst now = new Date().toISOString();\nconst manifest = input.manifest || {};\nconst publishManifest = {\n  ...(manifest.publish || {}),\n  youtube_video_id: input.youtube_video_id,\n  upload_response: input.upload_response || {},\n  thumbnail_set: false\n};\n\nreturn [{\n  json: {\n    run_id: input.run_id,\n    mode: input.mode,\n    youtube_video_id: input.youtube_video_id,\n    youtube_url: input.youtube_url,\n    privacy_status: input.privacy_status,\n    scheduled_publish: input.scheduled_publish,\n    thumbnail_set: false,\n    completed_at: now,\n    status: 'PUBLISHED',\n    manifest: {\n      ...manifest,\n      publish: publishManifest\n    }\n  }\n}];\n"
       },
       "id": "final_no_thumb",
       "name": "Final Response (no Thumbnail)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1820, 200]
+      "position": [
+        1820,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const base = $node['Increment Retry Count']?.json || $node['Init Upload Retry']?.json || $node['Prepare Upload Metadata'].json;\nconst uploadResponse = $json;\nconst now = new Date().toISOString();\nconst retryCount = base.retry_count || 0;\nconst maxRetries = base.max_retries || 3;\n\nconst error = uploadResponse?.error || uploadResponse?.message || uploadResponse?.errorMessage || null;\nconst statusCode = uploadResponse?.statusCode || uploadResponse?.error?.code || null;\nconst reason = uploadResponse?.error?.errors?.[0]?.reason || uploadResponse?.error?.reason || null;\nconst errorMessage = uploadResponse?.error?.message || uploadResponse?.message || error || 'Upload failed';\n\nconst isAuthError = ['authError', 'invalidCredentials', 'invalid_grant', 'unauthorized_client'].includes(reason) || statusCode === 401;\nconst isQuotaError = ['quotaExceeded', 'dailyLimitExceeded', 'userRateLimitExceeded', 'rateLimitExceeded'].includes(reason) || statusCode === 429;\nconst isTransient = ['backendError', 'internalError'].includes(reason) || [500, 503].includes(statusCode);\n\nconst retryable = isAuthError || isQuotaError || isTransient;\n\nif (uploadResponse?.id) {\n  const videoId = uploadResponse.id;\n  const youtubeUrl = `https://youtube.com/watch?v=${videoId}`;\n\n  return [{\n    json: {\n      run_id: base.run_id,\n      mode: base.mode,\n      youtube_video_id: videoId,\n      youtube_url: youtubeUrl,\n      youtube_status: uploadResponse.status,\n      privacy_status: base.privacy_status,\n      scheduled_publish: base.scheduled_publish,\n      thumbnail_url: base.thumbnail_url,\n      has_thumbnail: !!base.thumbnail_url,\n      uploaded_at: now,\n      status: 'PUBLISHED',\n      upload_response: {\n        id: videoId,\n        status: uploadResponse.status,\n        kind: uploadResponse.kind || null\n      },\n      retry_count: retryCount,\n      max_retries: maxRetries,\n      manifest: base.manifest || {}\n    },\n    binary: $binary\n  }];\n}\n\nconst errorCode = isAuthError ? 'FAILED_YT_AUTH' : (isQuotaError ? 'FAILED_YT_QUOTA' : 'FAILED');\n\nreturn [{\n  json: {\n    run_id: base.run_id,\n    mode: base.mode,\n    error: true,\n    error_code: errorCode,\n    error_message: errorMessage,\n    status: errorCode,\n    retryable: retryable,\n    retry_count: retryCount,\n    max_retries: maxRetries,\n    manifest: base.manifest || {}\n  },\n  binary: $binary\n}];\n"
+      },
+      "id": "classify_upload",
+      "name": "Classify Upload Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1300,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.error}}",
+              "operation": "notEqual",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "upload_success",
+      "name": "Upload Succeeded?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.retryable}}",
+              "operation": "isTrue"
+            },
+            {
+              "value1": "={{$json.retry_count}}",
+              "operation": "smaller",
+              "value2": "={{$json.max_retries}}"
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "should_retry",
+      "name": "Should Retry Upload?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $json;\nconst retryCount = input.retry_count || 0;\nconst baseDelay = 5;\nconst delay = Math.min(baseDelay * Math.pow(2, retryCount), 60);\n\nreturn [{\n  json: {\n    ...input,\n    retry_delay_sec: delay\n  },\n  binary: $binary\n}];\n"
+      },
+      "id": "retry_delay",
+      "name": "Compute Retry Delay",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1820,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "amount": "={{$json.retry_delay_sec}}",
+        "unit": "seconds"
+      },
+      "id": "retry_wait",
+      "name": "Wait Before Retry",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        1820,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $json;\nconst nextCount = (input.retry_count || 0) + 1;\n\nreturn [{\n  json: {\n    ...input,\n    retry_count: nextCount\n  },\n  binary: $binary\n}];\n"
+      },
+      "id": "increment_retry",
+      "name": "Increment Retry Count",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $json;\nconst now = new Date().toISOString();\n\nreturn [{\n  json: {\n    run_id: input.run_id,\n    mode: input.mode,\n    error: true,\n    error_code: input.error_code || 'FAILED',\n    error_message: input.error_message || 'Upload failed',\n    status: input.error_code || 'FAILED',\n    completed_at: now\n  }\n}];\n"
+      },
+      "id": "final_failure",
+      "name": "Final Upload Failure",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $json;\nconst manifest = input.manifest || {};\n\nconst publishManifest = {\n  ...(manifest.publish || {}),\n  youtube_video_id: input.youtube_video_id,\n  upload_response: input.upload_response || {}\n};\n\nreturn [{\n  json: {\n    run_id: input.run_id,\n    mode: input.mode,\n    youtube_video_id: input.youtube_video_id,\n    youtube_url: input.youtube_url,\n    youtube_status: input.youtube_status,\n    privacy_status: input.privacy_status,\n    scheduled_publish: input.scheduled_publish,\n    thumbnail_url: input.thumbnail_url,\n    has_thumbnail: input.has_thumbnail,\n    uploaded_at: input.uploaded_at,\n    status: input.status,\n    manifest: {\n      ...manifest,\n      publish: publishManifest\n    }\n  }\n}];\n"
+      },
+      "id": "success_manifest",
+      "name": "Build Upload Success",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        -80
+      ]
     }
   ],
   "connections": {
-    "Webhook Trigger": { "main": [[{"node": "Prepare Upload Metadata", "type": "main", "index": 0}]] },
-    "Prepare Upload Metadata": { "main": [[{"node": "Is Test Mode?", "type": "main", "index": 0}]] },
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prepare Upload Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Upload Metadata": {
+      "main": [
+        [
+          {
+            "node": "Has Prepare Error?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Prepare Error?": {
+      "main": [
+        [
+          {
+            "node": "Final Upload Failure",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Init Upload Retry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Init Upload Retry": {
+      "main": [
+        [
+          {
+            "node": "Is Test Mode?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Is Test Mode?": {
       "main": [
-        [{"node": "Test Mode Response", "type": "main", "index": 0}],
-        [{"node": "Download Rendered Video", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Test Mode Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Download Rendered Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
-    "Download Rendered Video": { "main": [[{"node": "Upload to YouTube", "type": "main", "index": 0}]] },
-    "Upload to YouTube": { "main": [[{"node": "Process Upload Result", "type": "main", "index": 0}]] },
-    "Process Upload Result": { "main": [[{"node": "Should Upload Thumbnail?", "type": "main", "index": 0}]] },
+    "Download Rendered Video": {
+      "main": [
+        [
+          {
+            "node": "Upload to YouTube",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload to YouTube": {
+      "main": [
+        [
+          {
+            "node": "Classify Upload Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Upload Result": {
+      "main": [
+        [
+          {
+            "node": "Upload Succeeded?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Succeeded?": {
+      "main": [
+        [
+          {
+            "node": "Build Upload Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Should Retry Upload?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Should Retry Upload?": {
+      "main": [
+        [
+          {
+            "node": "Compute Retry Delay",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Final Upload Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compute Retry Delay": {
+      "main": [
+        [
+          {
+            "node": "Wait Before Retry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Before Retry": {
+      "main": [
+        [
+          {
+            "node": "Increment Retry Count",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Increment Retry Count": {
+      "main": [
+        [
+          {
+            "node": "Upload to YouTube",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Upload Success": {
+      "main": [
+        [
+          {
+            "node": "Should Upload Thumbnail?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Should Upload Thumbnail?": {
       "main": [
-        [{"node": "Download Thumbnail", "type": "main", "index": 0}],
-        [{"node": "Final Response (no Thumbnail)", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Download Thumbnail",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Final Response (no Thumbnail)",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
-    "Download Thumbnail": { "main": [[{"node": "Set Thumbnail via API", "type": "main", "index": 0}]] },
-    "Set Thumbnail via API": { "main": [[{"node": "Final Response (with Thumbnail)", "type": "main", "index": 0}]] }
+    "Download Thumbnail": {
+      "main": [
+        [
+          {
+            "node": "Set Thumbnail via API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Thumbnail via API": {
+      "main": [
+        [
+          {
+            "node": "Final Response (with Thumbnail)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
   "active": false,
-  "settings": { "executionOrder": "v1" },
+  "settings": {
+    "executionOrder": "v1"
+  },
   "versionId": "yt-studio-wf-09-v2",
-  "meta": { "templateCredsSetupCompleted": true },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
   "id": "wf-09"
 }

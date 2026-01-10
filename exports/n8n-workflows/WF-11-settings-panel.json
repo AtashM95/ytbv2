@@ -9,22 +9,92 @@
         "formFields": {
           "values": [
             {
+              "fieldLabel": "Environment",
+              "fieldType": "dropdown",
+              "requiredField": true,
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "production"
+                  },
+                  {
+                    "option": "test"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Scope",
+              "fieldType": "dropdown",
+              "requiredField": true,
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "global"
+                  },
+                  {
+                    "option": "channel"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Channel Key",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "channel_001"
+            },
+            {
+              "fieldLabel": "YouTube OAuth Credential Ref",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "cred_youtube_oauth"
+            },
+            {
+              "fieldLabel": "YouTube Channel ID",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "UCxxxxxxxxxxxx"
+            },
+            {
               "fieldLabel": "Channel Category",
               "fieldType": "dropdown",
               "requiredField": true,
               "fieldOptions": {
                 "values": [
-                  { "option": "Tech & AI" },
-                  { "option": "Finance & Investing" },
-                  { "option": "Health & Fitness" },
-                  { "option": "Education" },
-                  { "option": "Gaming" },
-                  { "option": "Cooking & Recipes" },
-                  { "option": "Travel" },
-                  { "option": "Real Estate" },
-                  { "option": "Product Reviews" },
-                  { "option": "Pets & Animals" },
-                  { "option": "Custom" }
+                  {
+                    "option": "Tech & AI"
+                  },
+                  {
+                    "option": "Finance & Investing"
+                  },
+                  {
+                    "option": "Health & Fitness"
+                  },
+                  {
+                    "option": "Education"
+                  },
+                  {
+                    "option": "Gaming"
+                  },
+                  {
+                    "option": "Cooking & Recipes"
+                  },
+                  {
+                    "option": "Travel"
+                  },
+                  {
+                    "option": "Real Estate"
+                  },
+                  {
+                    "option": "Product Reviews"
+                  },
+                  {
+                    "option": "Pets & Animals"
+                  },
+                  {
+                    "option": "Custom"
+                  }
                 ]
               }
             },
@@ -34,14 +104,30 @@
               "requiredField": true,
               "fieldOptions": {
                 "values": [
-                  { "option": "English (en)" },
-                  { "option": "Arabic (ar)" },
-                  { "option": "Turkish (tr)" },
-                  { "option": "Spanish (es)" },
-                  { "option": "French (fr)" },
-                  { "option": "German (de)" },
-                  { "option": "Portuguese (pt)" },
-                  { "option": "Hindi (hi)" }
+                  {
+                    "option": "English (en)"
+                  },
+                  {
+                    "option": "Arabic (ar)"
+                  },
+                  {
+                    "option": "Turkish (tr)"
+                  },
+                  {
+                    "option": "Spanish (es)"
+                  },
+                  {
+                    "option": "French (fr)"
+                  },
+                  {
+                    "option": "German (de)"
+                  },
+                  {
+                    "option": "Portuguese (pt)"
+                  },
+                  {
+                    "option": "Hindi (hi)"
+                  }
                 ]
               }
             },
@@ -57,10 +143,18 @@
               "requiredField": true,
               "fieldOptions": {
                 "values": [
-                  { "option": "Short (3-5 min)" },
-                  { "option": "Medium (8-12 min)" },
-                  { "option": "Long (15-20 min)" },
-                  { "option": "Extra Long (25-40 min)" }
+                  {
+                    "option": "Short (3-5 min)"
+                  },
+                  {
+                    "option": "Medium (8-12 min)"
+                  },
+                  {
+                    "option": "Long (15-20 min)"
+                  },
+                  {
+                    "option": "Extra Long (25-40 min)"
+                  }
                 ]
               }
             },
@@ -70,9 +164,15 @@
               "requiredField": true,
               "fieldOptions": {
                 "values": [
-                  { "option": "720p HD" },
-                  { "option": "1080p Full HD" },
-                  { "option": "4K Ultra HD" }
+                  {
+                    "option": "720p HD"
+                  },
+                  {
+                    "option": "1080p Full HD"
+                  },
+                  {
+                    "option": "4K Ultra HD"
+                  }
                 ]
               }
             },
@@ -82,8 +182,12 @@
               "requiredField": true,
               "fieldOptions": {
                 "values": [
-                  { "option": "Standard" },
-                  { "option": "Premium" }
+                  {
+                    "option": "Standard"
+                  },
+                  {
+                    "option": "Premium"
+                  }
                 ]
               }
             },
@@ -105,8 +209,12 @@
               "requiredField": true,
               "fieldOptions": {
                 "values": [
-                  { "option": "Yes" },
-                  { "option": "No" }
+                  {
+                    "option": "Yes"
+                  },
+                  {
+                    "option": "No"
+                  }
                 ]
               }
             },
@@ -116,8 +224,12 @@
               "requiredField": true,
               "fieldOptions": {
                 "values": [
-                  { "option": "Enabled" },
-                  { "option": "Disabled" }
+                  {
+                    "option": "Enabled"
+                  },
+                  {
+                    "option": "Disabled"
+                  }
                 ]
               }
             },
@@ -127,8 +239,12 @@
               "requiredField": true,
               "fieldOptions": {
                 "values": [
-                  { "option": "Enabled" },
-                  { "option": "Disabled" }
+                  {
+                    "option": "Enabled"
+                  },
+                  {
+                    "option": "Disabled"
+                  }
                 ]
               }
             },
@@ -138,9 +254,15 @@
               "requiredField": true,
               "fieldOptions": {
                 "values": [
-                  { "option": "gpt-4o-mini" },
-                  { "option": "gpt-4o" },
-                  { "option": "gpt-4-turbo" }
+                  {
+                    "option": "gpt-4o-mini"
+                  },
+                  {
+                    "option": "gpt-4o"
+                  },
+                  {
+                    "option": "gpt-4-turbo"
+                  }
                 ]
               }
             },
@@ -156,9 +278,15 @@
               "requiredField": true,
               "fieldOptions": {
                 "values": [
-                  { "option": "cloudinary" },
-                  { "option": "generic_http" },
-                  { "option": "s3" }
+                  {
+                    "option": "cloudinary"
+                  },
+                  {
+                    "option": "generic_http"
+                  },
+                  {
+                    "option": "s3"
+                  }
                 ]
               }
             },
@@ -181,10 +309,46 @@
               "placeholder": "upload_preset"
             },
             {
+              "fieldLabel": "Cloudinary API Key Env Ref",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "CLOUDINARY_API_KEY"
+            },
+            {
+              "fieldLabel": "Cloudinary API Secret Env Ref",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "CLOUDINARY_API_SECRET"
+            },
+            {
               "fieldLabel": "Generic Upload Endpoint",
               "fieldType": "text",
               "requiredField": false,
               "placeholder": "https://my-uploader/upload"
+            },
+            {
+              "fieldLabel": "Generic Auth Header Env Ref",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "STORAGE_AUTH_HEADER"
+            },
+            {
+              "fieldLabel": "S3 Bucket",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "ytb-assets"
+            },
+            {
+              "fieldLabel": "S3 Region",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "eu-central-1"
+            },
+            {
+              "fieldLabel": "S3 Credential Ref",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "cred_s3"
             }
           ]
         }
@@ -193,42 +357,121 @@
       "name": "Settings Form",
       "type": "n8n-nodes-base.formTrigger",
       "typeVersion": 2,
-      "position": [0, 0],
+      "position": [
+        0,
+        0
+      ],
       "webhookId": "wf-11-settings"
     },
     {
       "parameters": {
         "language": "javascript",
-        "code": "const formData = $json;\nconst now = new Date().toISOString();\n\n// Map form values to config structure\nconst categoryMap = {\n  'Tech & AI': 'tech_ai',\n  'Finance & Investing': 'finance',\n  'Health & Fitness': 'health',\n  'Education': 'education',\n  'Gaming': 'gaming',\n  'Cooking & Recipes': 'cooking',\n  'Travel': 'travel',\n  'Real Estate': 'real_estate',\n  'Product Reviews': 'reviews',\n  'Pets & Animals': 'pets',\n  'Custom': 'custom'\n};\n\nconst languageMap = {\n  'English (en)': 'en',\n  'Arabic (ar)': 'ar',\n  'Turkish (tr)': 'tr',\n  'Spanish (es)': 'es',\n  'French (fr)': 'fr',\n  'German (de)': 'de',\n  'Portuguese (pt)': 'pt',\n  'Hindi (hi)': 'hi'\n};\n\nconst videoLengthMap = {\n  'Short (3-5 min)': 'short_3_5',\n  'Medium (8-12 min)': 'medium_8_12',\n  'Long (15-20 min)': 'long_15_20',\n  'Extra Long (25-40 min)': 'extra_25_40'\n};\n\nconst qualityMap = {\n  '720p HD': '720p',\n  '1080p Full HD': '1080p',\n  '4K Ultra HD': '4k'\n};\n\n// Parse target countries\nconst targetCountries = (formData['Target Countries'] || 'US, UK, CA, AU')\n  .split(',')\n  .map(c => c.trim().toUpperCase())\n  .filter(c => c.length === 2);\n\nconst storageProvider = (formData['Storage Provider'] || 'cloudinary').toString().toLowerCase();\n\n// Build config object\nconst config = {\n  category: categoryMap[formData['Channel Category']] || 'education',\n  language: languageMap[formData['Primary Language']] || 'en',\n  target_countries: targetCountries.length ? targetCountries : ['US', 'UK', 'CA', 'AU'],\n  video_length: {\n    normal: videoLengthMap[formData['Default Video Length']] || 'medium_8_12',\n    short: '60s'\n  },\n  quality: {\n    video: qualityMap[formData['Video Quality']] || '1080p',\n    voice: formData['Voice Quality']?.toLowerCase() || 'premium'\n  },\n  tts: {\n    voices: {}\n  },\n  options: {\n    auto_thumbnail: formData['Auto-generate Thumbnails'] === 'Yes',\n    seo_optimization: formData['SEO Optimization'] === 'Enabled',\n    auto_tags: formData['Auto Tags'] === 'Enabled'\n  },\n  openai: {\n    model: formData['OpenAI Model'] || 'gpt-4o-mini',\n    temperature: parseFloat(formData['OpenAI Temperature']) || 0.7\n  },\n  storage: {\n    provider: storageProvider,\n    base_url: formData['Storage Base URL (Optional)'] || null,\n    cloudinary: {\n      cloud_name: formData['Cloudinary Cloud Name'] || null,\n      upload_preset: formData['Cloudinary Upload Preset (Unsigned)'] || null\n    },\n    generic_http: {\n      upload_endpoint: formData['Generic Upload Endpoint'] || null\n    }\n  }\n};\n\n// Add voice IDs if provided\nconst language = config.language;\nif (formData['Male Voice ID (ElevenLabs)'] || formData['Female Voice ID (ElevenLabs)']) {\n  config.tts.voices[language] = {\n    male: formData['Male Voice ID (ElevenLabs)'] || null,\n    female: formData['Female Voice ID (ElevenLabs)'] || null\n  };\n}\n\nreturn [{\n  json: {\n    config: config,\n    updated_at: now\n  }\n}];"
+        "code": "const formData = $json;\nconst now = new Date().toISOString();\n\nconst allowedEnvs = ['production', 'test'];\nconst allowedScopes = ['global', 'channel'];\n\nconst environment = (formData['Environment'] || 'production').toString().toLowerCase();\nconst scope = (formData['Scope'] || 'global').toString().toLowerCase();\nconst channelKey = (formData['Channel Key'] || '').toString().trim();\n\nif (!allowedEnvs.includes(environment)) {\n  return [{\n    json: {\n      error: true,\n      error_message: `Invalid environment: ${formData['Environment']}`,\n      skip_save: true,\n      environment: environment,\n      scope: scope,\n      channel_key: channelKey\n    }\n  }];\n}\n\nif (!allowedScopes.includes(scope)) {\n  return [{\n    json: {\n      error: true,\n      error_message: `Invalid scope: ${formData['Scope']}`,\n      skip_save: true,\n      environment: environment,\n      scope: scope,\n      channel_key: channelKey\n    }\n  }];\n}\n\nif (scope === 'channel' && !channelKey) {\n  return [{\n    json: {\n      error: true,\n      error_message: 'Channel Key is required when scope=channel',\n      skip_save: true,\n      environment: environment,\n      scope: scope,\n      channel_key: channelKey\n    }\n  }];\n}\n\n// Map form values to config structure\nconst categoryMap = {\n  'Tech & AI': 'tech_ai',\n  'Finance & Investing': 'finance',\n  'Health & Fitness': 'health',\n  'Education': 'education',\n  'Gaming': 'gaming',\n  'Cooking & Recipes': 'cooking',\n  'Travel': 'travel',\n  'Real Estate': 'real_estate',\n  'Product Reviews': 'reviews',\n  'Pets & Animals': 'pets',\n  'Custom': 'custom'\n};\n\nconst languageMap = {\n  'English (en)': 'en',\n  'Arabic (ar)': 'ar',\n  'Turkish (tr)': 'tr',\n  'Spanish (es)': 'es',\n  'French (fr)': 'fr',\n  'German (de)': 'de',\n  'Portuguese (pt)': 'pt',\n  'Hindi (hi)': 'hi'\n};\n\nconst videoLengthMap = {\n  'Short (3-5 min)': 'short_3_5',\n  'Medium (8-12 min)': 'medium_8_12',\n  'Long (15-20 min)': 'long_15_20',\n  'Extra Long (25-40 min)': 'extra_25_40'\n};\n\nconst qualityMap = {\n  '720p HD': '720p',\n  '1080p Full HD': '1080p',\n  '4K Ultra HD': '4k'\n};\n\n// Parse target countries\nconst targetCountries = (formData['Target Countries'] || 'US, UK, CA, AU')\n  .split(',')\n  .map(c => c.trim().toUpperCase())\n  .filter(c => c.length === 2);\n\nconst storageProvider = (formData['Storage Provider'] || 'cloudinary').toString().toLowerCase();\n\nconst makeEnvRef = (value) => value ? { type: 'env_ref', ref: value } : null;\nconst makeCredRef = (value) => value ? { type: 'credential_ref', ref: value } : null;\n\n// Build config object\nconst config = {\n  category: categoryMap[formData['Channel Category']] || 'education',\n  language: languageMap[formData['Primary Language']] || 'en',\n  target_countries: targetCountries.length ? targetCountries : ['US', 'UK', 'CA', 'AU'],\n  video_length: {\n    normal: videoLengthMap[formData['Default Video Length']] || 'medium_8_12',\n    short: '60s'\n  },\n  quality: {\n    video: qualityMap[formData['Video Quality']] || '1080p',\n    voice: formData['Voice Quality']?.toLowerCase() || 'premium'\n  },\n  tts: {\n    voices: {}\n  },\n  options: {\n    auto_thumbnail: formData['Auto-generate Thumbnails'] === 'Yes',\n    seo_optimization: formData['SEO Optimization'] === 'Enabled',\n    auto_tags: formData['Auto Tags'] === 'Enabled'\n  },\n  openai: {\n    model: formData['OpenAI Model'] || 'gpt-4o-mini',\n    temperature: Number.isFinite(parseFloat(formData['OpenAI Temperature']))\n      ? parseFloat(formData['OpenAI Temperature'])\n      : 0.7\n  },\n  youtube: {\n    credential_ref: makeCredRef(formData['YouTube OAuth Credential Ref'] || ''),\n    channel_id: formData['YouTube Channel ID'] || null\n  },\n  storage: {\n    provider: storageProvider,\n    base_url: formData['Storage Base URL (Optional)'] || null,\n    cloudinary: {\n      cloud_name: formData['Cloudinary Cloud Name'] || null,\n      upload_preset: formData['Cloudinary Upload Preset (Unsigned)'] || null,\n      api_key_ref: makeEnvRef(formData['Cloudinary API Key Env Ref'] || ''),\n      api_secret_ref: makeEnvRef(formData['Cloudinary API Secret Env Ref'] || '')\n    },\n    generic_http: {\n      upload_endpoint: formData['Generic Upload Endpoint'] || null,\n      auth_header_ref: makeEnvRef(formData['Generic Auth Header Env Ref'] || '')\n    },\n    s3: {\n      bucket: formData['S3 Bucket'] || null,\n      region: formData['S3 Region'] || null,\n      credential_ref: makeCredRef(formData['S3 Credential Ref'] || '')\n    }\n  }\n};\n\n// Add voice IDs if provided\nconst language = config.language;\nif (formData['Male Voice ID (ElevenLabs)'] || formData['Female Voice ID (ElevenLabs)']) {\n  config.tts.voices[language] = {\n    male: formData['Male Voice ID (ElevenLabs)'] || null,\n    female: formData['Female Voice ID (ElevenLabs)'] || null\n  };\n}\n\nreturn [{\n  json: {\n    config: config,\n    environment: environment,\n    scope: scope,\n    channel_key: channelKey || null,\n    updated_at: now,\n    updated_by: 'wf-11'\n  }\n}];\n"
       },
       "id": "parse_form",
       "name": "Parse Form Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [260, 0]
+      "position": [
+        260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.skip_save}}",
+              "operation": "isTrue"
+            }
+          ]
+        }
+      },
+      "id": "validation_check",
+      "name": "Has Validation Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        520,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $json;\nconst now = new Date().toISOString();\n\nreturn [{\n  json: {\n    success: false,\n    message: input.error_message || 'Validation failed',\n    environment: input.environment || null,\n    scope: input.scope || null,\n    channel_key: input.channel_key || null,\n    saved_count: 0,\n    skipped_count: 0,\n    saved_keys: [],\n    saved_at: now\n  }\n}];\n"
+      },
+      "id": "validation_error",
+      "name": "Validation Error Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "language": "javascript",
+        "code": "const input = $json;\nconst config = input.config || {};\nconst environment = input.environment || 'production';\nconst scope = input.scope || 'global';\nconst channelKey = input.channel_key || null;\nconst updatedAt = input.updated_at || new Date().toISOString();\nconst updatedBy = input.updated_by || 'wf-11';\n\nconst rows = [];\nconst savedKeys = [];\n\nfunction pushEntry(key, value, valueType = 'string', credentialRef = null, envRef = null, notes = null) {\n  rows.push({\n    key: key,\n    value: value === undefined ? null : value,\n    value_type: valueType,\n    credential_ref: credentialRef,\n    env_ref: envRef,\n    scope: scope,\n    environment: environment,\n    channel_key: channelKey,\n    notes: notes,\n    is_active: true,\n    updated_by: updatedBy,\n    updated_at: updatedAt\n  });\n  if (savedKeys.length < 10) {\n    savedKeys.push(key);\n  }\n}\n\nfunction flatten(obj, prefix = '') {\n  Object.entries(obj).forEach(([entryKey, entryValue]) => {\n    const path = prefix ? `${prefix}.${entryKey}` : entryKey;\n\n    if (entryValue === null || entryValue === undefined) {\n      pushEntry(path, null, 'string');\n      return;\n    }\n\n    if (typeof entryValue === 'object' && entryValue.type && entryValue.ref) {\n      if (entryValue.type === 'credential_ref') {\n        pushEntry(path, null, 'credential_ref', entryValue.ref, null);\n        return;\n      }\n      if (entryValue.type === 'env_ref') {\n        pushEntry(path, null, 'env_ref', null, entryValue.ref);\n        return;\n      }\n    }\n\n    if (Array.isArray(entryValue)) {\n      pushEntry(path, JSON.stringify(entryValue), 'json');\n      return;\n    }\n\n    if (typeof entryValue === 'object') {\n      flatten(entryValue, path);\n      return;\n    }\n\n    if (typeof entryValue === 'boolean') {\n      pushEntry(path, entryValue ? 'true' : 'false', 'boolean');\n      return;\n    }\n\n    if (typeof entryValue === 'number') {\n      pushEntry(path, entryValue.toString(), 'number');\n      return;\n    }\n\n    pushEntry(path, entryValue.toString(), 'string');\n  });\n}\n\nflatten(config);\n\nconst responseMeta = {\n  environment: environment,\n  scope: scope,\n  channel_key: channelKey,\n  updated_at: updatedAt,\n  updated_by: updatedBy,\n  row_count: rows.length,\n  saved_keys: savedKeys,\n  config: config\n};\n\nreturn rows.map(row => ({ json: { ...row, response_meta: responseMeta } }));\n"
+      },
+      "id": "prepare_rows",
+      "name": "Prepare Config Rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        0
+      ]
     },
     {
       "parameters": {
         "operation": "upsert",
-        "schema": { "__rl": true, "mode": "list", "value": "public" },
-        "table": { "__rl": true, "mode": "list", "value": "yt_studio_config" },
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "yt_studio_config"
+        },
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "config_key": "=user_settings",
-            "config_value": "={{ JSON.stringify($json.config) }}",
-            "is_active": true
+            "key": "={{ $json.key }}",
+            "value": "={{ $json.value }}",
+            "value_type": "={{ $json.value_type }}",
+            "credential_ref": "={{ $json.credential_ref }}",
+            "env_ref": "={{ $json.env_ref }}",
+            "scope": "={{ $json.scope }}",
+            "environment": "={{ $json.environment }}",
+            "channel_key": "={{ $json.channel_key }}",
+            "notes": "={{ $json.notes }}",
+            "is_active": "={{ $json.is_active }}",
+            "updated_by": "={{ $json.updated_by }}",
+            "updated_at": "={{ $json.updated_at }}"
           }
         },
         "options": {
-          "conflictColumns": ["config_key"]
+          "conflictColumns": [
+            "environment",
+            "scope",
+            "channel_key",
+            "key"
+          ]
         }
       },
       "id": "save_config",
       "name": "Save Config to Database",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [520, 0],
+      "position": [
+        1040,
+        0
+      ],
       "credentials": {
         "postgres": {
           "id": "postgres_yt_studio",
@@ -240,23 +483,89 @@
     {
       "parameters": {
         "language": "javascript",
-        "code": "const input = $node['Parse Form Data'].json;\nconst dbResult = $json;\nconst now = new Date().toISOString();\n\nconst success = !dbResult.error;\n\nreturn [{\n  json: {\n    success: success,\n    message: success ? 'Settings saved successfully!' : 'Failed to save settings: ' + (dbResult.error || 'Unknown error'),\n    config: input.config,\n    saved_at: now\n  }\n}];"
+        "code": "const meta = $items('Prepare Config Rows')[0]?.json?.response_meta || {};\nconst dbResult = $json;\nconst now = new Date().toISOString();\n\nconst success = !dbResult.error;\n\nreturn [{\n  json: {\n    success: success,\n    message: success\n      ? `Settings saved successfully (${meta.row_count || 0} keys).`\n      : 'Failed to save settings: ' + (dbResult.error || 'Unknown error'),\n    environment: meta.environment,\n    scope: meta.scope,\n    channel_key: meta.channel_key || null,\n    saved_count: meta.row_count || 0,\n    skipped_count: 0,\n    saved_keys: meta.saved_keys || [],\n    updated_at: meta.updated_at || now,\n    saved_at: now\n  }\n}];\n"
       },
       "id": "build_response",
       "name": "Build Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [780, 0]
+      "position": [
+        1300,
+        0
+      ]
     }
   ],
   "connections": {
-    "Settings Form": { "main": [[{"node": "Parse Form Data", "type": "main", "index": 0}]] },
-    "Parse Form Data": { "main": [[{"node": "Save Config to Database", "type": "main", "index": 0}]] },
-    "Save Config to Database": { "main": [[{"node": "Build Response", "type": "main", "index": 0}]] }
+    "Settings Form": {
+      "main": [
+        [
+          {
+            "node": "Parse Form Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Form Data": {
+      "main": [
+        [
+          {
+            "node": "Has Validation Error?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Validation Error?": {
+      "main": [
+        [
+          {
+            "node": "Validation Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Config Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Config Rows": {
+      "main": [
+        [
+          {
+            "node": "Save Config to Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Config to Database": {
+      "main": [
+        [
+          {
+            "node": "Build Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
   "active": false,
-  "settings": { "executionOrder": "v1" },
+  "settings": {
+    "executionOrder": "v1"
+  },
   "versionId": "yt-studio-wf-11-v1",
-  "meta": { "templateCredsSetupCompleted": true },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
   "id": "wf-11"
 }
